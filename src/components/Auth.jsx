@@ -18,12 +18,14 @@ export default function Auth() {
     setError(null)
     setMessage(null)
 
+    const redirectTo = `${window.location.origin}${window.location.pathname}`
+
     if (mode === 'magic') {
-      const { error } = await supabase.auth.signInWithOtp({ email })
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
       if (error) setError(error.message)
       else setMessage('Check your email for a magic link!')
     } else if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } })
       if (error) setError(error.message)
       else setMessage('Account created! Check your email to confirm.')
     } else {
