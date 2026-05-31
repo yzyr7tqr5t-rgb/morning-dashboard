@@ -288,9 +288,11 @@ export default function App() {
           <HabitsManager habits={habits} userId={session.user.id} onClose={() => setShowManager(false)} isLight={isLight} />
         )}
       </AnimatePresence>
-      {showPrefs && (
-        <PrefsManager prefs={prefs} onSave={savePrefs} onClose={() => setShowPrefs(false)} />
-      )}
+      <AnimatePresence>
+        {showPrefs && (
+          <PrefsManager prefs={prefs} onSave={savePrefs} onClose={() => setShowPrefs(false)} />
+        )}
+      </AnimatePresence>
 
       <div className="max-w-lg mx-auto space-y-5">
 

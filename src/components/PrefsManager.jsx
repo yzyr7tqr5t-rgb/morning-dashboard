@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { X, User, Palette, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,13 +16,33 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className={cn(
-        'w-full max-w-sm rounded-2xl border shadow-2xl',
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      style={{ display: 'flex', alignItems: window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent: 'center', padding: window.innerWidth >= 768 ? '1rem' : '0' }}
+    >
+      <motion.div
+        initial={window.innerWidth >= 768 ? { opacity: 0, scale: 0.95 } : { y: '100%' }}
+        animate={window.innerWidth >= 768 ? { opacity: 1, scale: 1 } : { y: 0 }}
+        exit={window.innerWidth >= 768 ? { opacity: 0, scale: 0.95 } : { y: '100%' }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className={cn(
+        'w-full shadow-2xl',
+        window.innerWidth >= 768 ? 'max-w-sm rounded-2xl border' : 'rounded-t-3xl',
         form.theme === 'light'
           ? 'bg-white border-slate-200'
           : 'bg-slate-900 border-slate-700'
       )}>
+        {/* Handle — mobile only */}
+        {window.innerWidth < 768 && (
+          <div className="flex justify-center pt-3 pb-1">
+            <div className={cn('w-9 h-1 rounded-full', form.theme === 'light' ? 'bg-slate-200' : 'bg-white/20')} />
+          </div>
+        )}
+
         {/* Header */}
         <div className={cn('flex items-center justify-between px-5 py-4 border-b',
           form.theme === 'light' ? 'border-slate-200' : 'border-slate-700/60')}>
@@ -55,27 +76,31 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
           </div>
 
           {/* Theme */}
-          <div className="space-y-1.5">
-            <label className={cn('flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider',
-              form.theme === 'light' ? 'text-slate-500' : 'text-slate-400')}>
-              <Palette className="w-3.5 h-3.5" /> Theme
+          <div className="flex items-center justify-between">
+            <label className={cn('flex items-center gap-2 text-sm font-medium cursor-pointer',
+              form.theme === 'light' ? 'text-slate-700' : 'text-slate-300')}
+              onClick={() => setForm(f => ({ ...f, theme: f.theme === 'light' ? 'dark' : 'light' }))}>
+              <span>{form.theme === 'light' ? '☀️' : '🌙'}</span>
+              {form.theme === 'light' ? 'Light mode' : 'Dark mode'}
             </label>
-            <div className={cn('flex gap-1 p-1 rounded-xl', form.theme === 'light' ? 'bg-slate-100' : 'bg-slate-800')}>
-              {['dark', 'light'].map(t => (
-                <button
-                  key={t}
-                  onClick={() => setForm(f => ({ ...f, theme: t }))}
-                  className={cn(
-                    'flex-1 py-1.5 rounded-lg text-sm font-medium capitalize transition-all cursor-pointer',
-                    form.theme === t
-                      ? 'bg-blue-600 text-white'
-                      : form.theme === 'light' ? 'text-slate-500 hover:text-slate-700' : 'text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  {t === 'dark' ? '🌙 Dark' : '☀️ Light'}
-                </button>
-              ))}
-            </div>
+            <button
+              role="switch"
+              aria-checked={form.theme === 'light'}
+              onClick={() => setForm(f => ({ ...f, theme: f.theme === 'light' ? 'dark' : 'light' }))}
+              className={cn(
+                'relative w-12 h-7 rounded-full transition-colors duration-200 cursor-pointer shrink-0',
+                form.theme === 'light' ? 'bg-blue-500' : 'bg-slate-600'
+              )}
+            >
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className={cn(
+                  'absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm',
+                  form.theme === 'light' ? 'left-6' : 'left-1'
+                )}
+              />
+            </button>
           </div>
 
           {/* Widgets */}
@@ -128,7 +153,8 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
             Save
           </button>
         </div>
-      </div>
-    </div>
+        {window.innerWidth < 768 && <div className="h-4" />}
+      </motion.div>
+    </motion.div>
   )
 }
