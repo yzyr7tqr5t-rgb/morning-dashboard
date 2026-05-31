@@ -36,28 +36,30 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm bg-white border-slate-200 shadow-lg">
-        <CardHeader className="text-center pb-2">
-          <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center">
-              <Sun className="w-6 h-6 text-indigo-500" />
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-indigo-50/60 flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {/* App icon */}
+        <div className="flex justify-center mb-8">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+            <Sun className="w-10 h-10 text-white" />
           </div>
-          <p className="text-slate-900 font-semibold text-xl">Morning Dashboard</p>
-          <p className="text-slate-500 text-sm mt-1">
-            {mode === 'magic' ? 'Sign in with a magic link' : mode === 'signup' ? 'Create your account' : 'Welcome back'}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handle} className="space-y-3">
+        </div>
+
+        <h1 className="text-2xl font-bold text-slate-900 text-center mb-1">Morning Dashboard</h1>
+        <p className="text-slate-400 text-sm text-center mb-8">
+          {mode === 'magic' ? 'Sign in with a magic link' : mode === 'signup' ? 'Create your account' : 'Welcome back'}
+        </p>
+
+        <form onSubmit={handle} className="space-y-3">
+          {/* Grouped input iOS style */}
+          <div className="rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-100">
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full px-4 py-3.5 text-slate-900 text-sm placeholder-slate-400 bg-transparent focus:outline-none border-b border-slate-100"
             />
             {mode !== 'magic' && (
               <input
@@ -66,39 +68,41 @@ export default function Auth() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full px-4 py-3.5 text-slate-900 text-sm placeholder-slate-400 bg-transparent focus:outline-none"
               />
             )}
-            {error && <p className="text-red-500 text-xs">{error}</p>}
-            {message && <p className="text-green-600 text-xs">{message}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors cursor-pointer"
-            >
-              {loading ? 'Loading…' : mode === 'magic' ? 'Send magic link' : mode === 'signup' ? 'Create account' : 'Sign in'}
-            </button>
-          </form>
-
-          <div className="flex flex-col gap-2 pt-1">
-            {mode !== 'magic' && (
-              <button onClick={() => setMode('magic')} className="text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-                Sign in with magic link instead
-              </button>
-            )}
-            {mode === 'login' && (
-              <button onClick={() => setMode('signup')} className="text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-                Don't have an account? Sign up
-              </button>
-            )}
-            {(mode === 'signup' || mode === 'magic') && (
-              <button onClick={() => setMode('login')} className="text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-                Already have an account? Sign in
-              </button>
-            )}
           </div>
-        </CardContent>
-      </Card>
+
+          {error && <p className="text-red-500 text-xs px-1">{error}</p>}
+          {message && <p className="text-green-600 text-xs px-1">{message}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors cursor-pointer shadow-sm shadow-indigo-200"
+          >
+            {loading ? 'Loading…' : mode === 'magic' ? 'Send magic link' : mode === 'signup' ? 'Create account' : 'Sign in'}
+          </button>
+        </form>
+
+        <div className="flex flex-col gap-3 mt-6 items-center">
+          {mode !== 'magic' && (
+            <button onClick={() => setMode('magic')} className="text-sm text-indigo-500 hover:text-indigo-700 font-medium cursor-pointer">
+              Use magic link instead
+            </button>
+          )}
+          {mode === 'login' && (
+            <button onClick={() => setMode('signup')} className="text-sm text-slate-400 hover:text-slate-600 cursor-pointer">
+              Don't have an account? <span className="text-indigo-500 font-medium">Sign up</span>
+            </button>
+          )}
+          {(mode === 'signup' || mode === 'magic') && (
+            <button onClick={() => setMode('login')} className="text-sm text-slate-400 hover:text-slate-600 cursor-pointer">
+              Already have an account? <span className="text-indigo-500 font-medium">Sign in</span>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -31,28 +31,37 @@ export default function WeeklyView({ habits, log, isLight }) {
     return m
   }, [log])
 
+  const secondary = isLight ? 'text-slate-400' : 'text-white/40'
+  const sectionLabel = cn('text-xs font-medium mb-3', secondary)
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Bar chart */}
       <div>
-        <h3 className={cn('text-xs font-medium uppercase tracking-wider mb-3', isLight ? 'text-slate-500' : 'text-slate-400')}>7-day completion</h3>
-        <div className="flex items-end gap-2 h-24">
+        <p className={sectionLabel}>Last 7 days</p>
+        <div className="flex items-end gap-1.5" style={{ height: '72px' }}>
           {days.map(({ date, label, pct, completed, total }) => (
             <div key={date} className="flex-1 flex flex-col items-center gap-1">
-              <span className={cn('text-xs', isLight ? 'text-slate-400' : 'text-slate-500')}>{completed}/{total}</span>
-              <div className={cn('w-full rounded-t-md relative', isLight ? 'bg-slate-200' : 'bg-slate-800')} style={{ height: '56px' }}>
+              <div
+                className={cn('w-full rounded-lg relative', isLight ? 'bg-slate-100' : 'bg-white/8')}
+                style={{ height: '48px' }}
+              >
                 <div
                   className={cn(
-                    'absolute bottom-0 left-0 right-0 rounded-t-md transition-all duration-500',
-                    pct === 100 ? 'bg-gradient-to-t from-indigo-600 to-violet-500' :
-                    pct >= 60 ? 'bg-indigo-500/70' :
-                    pct > 0 ? (isLight ? 'bg-slate-400' : 'bg-slate-600') :
-                    (isLight ? 'bg-slate-200' : 'bg-slate-800')
+                    'absolute bottom-0 left-0 right-0 rounded-lg transition-all duration-500',
+                    pct === 100 ? 'bg-indigo-500' :
+                    pct >= 60  ? 'bg-indigo-400/70' :
+                    pct > 0    ? (isLight ? 'bg-slate-300' : 'bg-white/20') :
+                                 'bg-transparent'
                   )}
-                  style={{ height: `${Math.max(pct, pct > 0 ? 8 : 0)}%` }}
+                  style={{ height: `${Math.max(pct, pct > 0 ? 15 : 0)}%` }}
                 />
               </div>
-              <span className={cn('text-xs', label === 'Today' ? (isLight ? 'text-indigo-600 font-medium' : 'text-indigo-300 font-medium') : (isLight ? 'text-slate-400' : 'text-slate-500'))}>
+              <span className={cn('text-[10px] font-medium',
+                label === 'Today'
+                  ? (isLight ? 'text-indigo-500' : 'text-indigo-400')
+                  : secondary
+              )}>
                 {label}
               </span>
             </div>
@@ -60,34 +69,39 @@ export default function WeeklyView({ habits, log, isLight }) {
         </div>
       </div>
 
-      {/* History list */}
+      {/* History list — iOS grouped style */}
       <div>
-        <h3 className={cn('text-xs font-medium uppercase tracking-wider mb-3', isLight ? 'text-slate-500' : 'text-slate-400')}>History</h3>
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-          {[...days].reverse().map(({ date, label, completed, total }) => {
+        <p className={sectionLabel}>History</p>
+        <div className={cn('rounded-2xl overflow-hidden max-h-72 overflow-y-auto', isLight ? 'bg-slate-50' : 'bg-white/5')}>
+          {[...days].reverse().map(({ date, label, completed, total }, i, arr) => {
             const done = habitMap[date] ?? new Set()
+            const isToday = label === 'Today'
+            const isLast = i === arr.length - 1
             return (
-              <div key={date} className={cn('rounded-xl px-4 py-3 border', isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/50 border-slate-700/50')}>
-                <div className="flex items-center justify-between mb-2">
+              <div
+                key={date}
+                className={cn('px-4 py-3', !isLast && (isLight ? 'border-b border-slate-100' : 'border-b border-white/5'))}
+              >
+                <div className="flex items-center justify-between mb-1.5">
                   <span className={cn('text-sm font-medium',
-                    label === 'Today'
-                      ? (isLight ? 'text-indigo-600' : 'text-indigo-300')
-                      : (isLight ? 'text-slate-700' : 'text-slate-300')
+                    isToday
+                      ? (isLight ? 'text-indigo-600' : 'text-indigo-400')
+                      : (isLight ? 'text-slate-700' : 'text-white/80')
                   )}>
-                    {label === 'Today' ? 'Today' : new Date(date + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+                    {isToday ? 'Today' : new Date(date + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
                   </span>
-                  <span className={cn('text-xs', isLight ? 'text-slate-400' : 'text-slate-500')}>{completed}/{total}</span>
+                  <span className={cn('text-xs tabular-nums', secondary)}>{completed}/{total}</span>
                 </div>
                 {habits.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1">
                     {habits.map(h => (
                       <span
                         key={h.id}
                         className={cn(
-                          'text-xs px-2 py-0.5 rounded-full border flex items-center gap-1',
+                          'text-[11px] px-2 py-0.5 rounded-full flex items-center gap-0.5',
                           done.has(h.id)
-                            ? (isLight ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-700' : 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200')
-                            : (isLight ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-slate-700/30 border-slate-600/30 text-slate-500')
+                            ? (isLight ? 'bg-indigo-100 text-indigo-600' : 'bg-indigo-500/20 text-indigo-300')
+                            : (isLight ? 'text-slate-300' : 'text-white/20')
                         )}
                       >
                         {getEmoji(h.icon)} {h.label}
