@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, Circle, Coffee, BookOpen, Dumbbell, Apple, Smile, Flame, Moon, LogOut } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -21,39 +21,75 @@ const QUOTES = [
   "Your future is created by what you do today, not tomorrow.",
 ]
 
-function useTime() {
-  const [time, setTime] = useState(new Date())
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  return time
-}
-
-function WeatherIcon({ code }) {
-  if (code <= 1) return <Sun className="w-10 h-10 text-yellow-400" />
-  if (code <= 3) return <Cloud className="w-10 h-10 text-slate-400" />
-  return <CloudRain className="w-10 h-10 text-blue-400" />
-}
-
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// ─── Clock: isolated so only it re-renders every second ──────────────────────
+const Clock = memo(function Clock() {
+  const [time, setTime] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const hours = time.getHours()
+  const greeting = hours < 12 ? 'Good morning' : hours < 17 ? 'Good afternoon' : 'Good evening'
+  const GreetIcon = hours < 17 ? Sun : Moon
+  const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const dateStr = time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+
+  return (
+    <div className="text-center space-y-1 py-4">
+      <div className="flex items-center justify-center gap-2 text-indigo-300 mb-2">
+        <GreetIcon className="w-5 h-5" />
+        <span className="text-sm font-medium tracking-widest uppercase">{greeting}</span>
+      </div>
+      <h1 className="text-6xl font-bold text-white tabular-nums tracking-tight">{timeStr}</h1>
+      <p className="text-slate-400 text-lg">{dateStr}</p>
+    </div>
+  )
+})
+
+// ─── Weather icon ─────────────────────────────────────────────────────────────
+const WeatherIcon = memo(function WeatherIcon({ code }) {
+  if (code <= 1) return <Sun className="w-10 h-10 text-yellow-400" />
+  if (code <= 3) return <Cloud className="w-10 h-10 text-slate-400" />
+  return <CloudRain className="w-10 h-10 text-blue-400" />
+})
+
+// ─── Single habit row ─────────────────────────────────────────────────────────
+const HabitRow = memo(function HabitRow({ id, label, icon: Icon, checked, onToggle }) {
+  return (
+    <button
+      onClick={() => onToggle(id)}
+      className={cn(
+        'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left cursor-pointer',
+        checked
+          ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200'
+          : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:bg-slate-800'
+      )}
+    >
+      {checked
+        ? <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
+        : <Circle className="w-5 h-5 text-slate-500 shrink-0" />
+      }
+      <Icon className="w-4 h-4 shrink-0 opacity-60" />
+      <span className={cn('text-sm font-medium', checked && 'line-through opacity-60')}>{label}</span>
+    </button>
+  )
+})
+
+// ─── Main app ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const now = useTime()
   const [session, setSession] = useState(undefined)
   const [checked, setChecked] = useState({})
   const [weather, setWeather] = useState(null)
   const [streak, setStreak] = useState(0)
 
-  const quote = QUOTES[now.getDay() % QUOTES.length]
-  const hours = now.getHours()
-  const greeting = hours < 12 ? 'Good morning' : hours < 17 ? 'Good afternoon' : 'Good evening'
-  const GreetIcon = hours < 17 ? Sun : Moon
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
-  const done = Object.values(checked).filter(Boolean).length
+  const quote = useMemo(() => QUOTES[new Date().getDay() % QUOTES.length], [])
+  const done = useMemo(() => Object.values(checked).filter(Boolean).length, [checked])
 
   // Auth state
   useEffect(() => {
@@ -93,7 +129,7 @@ export default function App() {
     return () => supabase.removeChannel(channel)
   }, [session])
 
-  // Compute streak
+  // Streak — only recalculate on session change, not on every habit toggle
   useEffect(() => {
     if (!session) return
     supabase
@@ -102,7 +138,7 @@ export default function App() {
       .eq('user_id', session.user.id)
       .order('date', { ascending: false })
       .then(({ data }) => {
-        if (!data?.length) return
+        if (!data?.length) return setStreak(0)
         const dates = [...new Set(data.map(r => r.date))].sort().reverse()
         let count = 0
         let cursor = new Date()
@@ -114,9 +150,9 @@ export default function App() {
         }
         setStreak(count)
       })
-  }, [session, checked])
+  }, [session]) // removed `checked` — no DB call on every tap
 
-  // Weather
+  // Weather — fetch once on mount
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(({ coords }) => {
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m`)
@@ -126,21 +162,30 @@ export default function App() {
     })
   }, [])
 
-  const toggle = async (id) => {
+  // Optimistic toggle — update UI instantly, sync to DB in background
+  const toggle = useCallback(async (id) => {
     if (!session) return
-    if (checked[id]) {
-      await supabase.from('habits_log').delete()
+    const wasChecked = !!checked[id]
+
+    // Optimistic update — instant feedback
+    setChecked(prev => ({ ...prev, [id]: !wasChecked }))
+
+    if (wasChecked) {
+      const { error } = await supabase.from('habits_log').delete()
         .eq('user_id', session.user.id)
         .eq('habit_id', id)
         .eq('date', today())
+      // Roll back on error
+      if (error) setChecked(prev => ({ ...prev, [id]: true }))
     } else {
-      await supabase.from('habits_log').upsert({
+      const { error } = await supabase.from('habits_log').upsert({
         user_id: session.user.id,
         habit_id: id,
         date: today(),
       })
+      if (error) setChecked(prev => ({ ...prev, [id]: false }))
     }
-  }
+  }, [session, checked])
 
   if (session === undefined) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center">
@@ -154,8 +199,9 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div className="text-center space-y-1 py-4 relative">
+        {/* Header — sign out sits outside Clock so Clock re-renders don't touch it */}
+        <div className="relative">
+          <Clock />
           <button
             onClick={() => supabase.auth.signOut()}
             className="absolute right-0 top-4 flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
@@ -163,12 +209,6 @@ export default function App() {
             <LogOut className="w-3.5 h-3.5" />
             Sign out
           </button>
-          <div className="flex items-center justify-center gap-2 text-indigo-300 mb-2">
-            <GreetIcon className="w-5 h-5" />
-            <span className="text-sm font-medium tracking-widest uppercase">{greeting}</span>
-          </div>
-          <h1 className="text-6xl font-bold text-white tabular-nums tracking-tight">{timeStr}</h1>
-          <p className="text-slate-400 text-lg">{dateStr}</p>
         </div>
 
         {/* Quote */}
@@ -195,24 +235,15 @@ export default function App() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {HABITS.map(({ id, label, icon: Icon }) => (
-                <button
+              {HABITS.map(({ id, label, icon }) => (
+                <HabitRow
                   key={id}
-                  onClick={() => toggle(id)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left cursor-pointer',
-                    checked[id]
-                      ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200'
-                      : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:bg-slate-800'
-                  )}
-                >
-                  {checked[id]
-                    ? <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                    : <Circle className="w-5 h-5 text-slate-500 shrink-0" />
-                  }
-                  <Icon className="w-4 h-4 shrink-0 opacity-60" />
-                  <span className={cn('text-sm font-medium', checked[id] && 'line-through opacity-60')}>{label}</span>
-                </button>
+                  id={id}
+                  label={label}
+                  icon={icon}
+                  checked={!!checked[id]}
+                  onToggle={toggle}
+                />
               ))}
             </CardContent>
           </Card>
