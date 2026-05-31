@@ -1,5 +1,20 @@
 import { useState } from 'react'
 import { Plus, Trash2, GripVertical, X, Check } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -22,12 +37,109 @@ export function getEmoji(icon) {
   return ICON_OPTIONS.find(o => o.value === icon)?.emoji ?? '✅'
 }
 
+// ─── Single sortable habit row ────────────────────────────────────────────────
+function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdit, onSaveEdit, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors group',
+        isDragging
+          ? 'bg-indigo-500/10 border-indigo-500/40 shadow-lg'
+          : 'bg-slate-800/50 border-slate-700/50'
+      )}
+    >
+      {/* Drag handle — touch & mouse */}
+      <button
+        className="text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing touch-none shrink-0"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+
+      <span className="text-base shrink-0">{getEmoji(habit.icon)}</span>
+
+      {editingId === habit.id ? (
+        <input
+          autoFocus
+          value={editLabel}
+          onChange={e => onEditLabel(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && onSaveEdit(habit.id)}
+          className="flex-1 bg-slate-700 text-white text-sm px-2 py-1 rounded-lg outline-none border border-indigo-500"
+        />
+      ) : (
+        <span
+          className="flex-1 text-sm text-slate-200 cursor-pointer hover:text-white"
+          onClick={() => onStartEdit(habit)}
+        >
+          {habit.label}
+        </span>
+      )}
+
+      {editingId === habit.id ? (
+        <button onClick={() => onSaveEdit(habit.id)} className="text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0">
+          <Check className="w-4 h-4" />
+        </button>
+      ) : (
+        <button
+          onClick={() => onRemove(habit.id)}
+          className="text-slate-600 hover:text-red-400 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Manager modal ────────────────────────────────────────────────────────────
 export default function HabitsManager({ habits, userId, onClose }) {
   const [newLabel, setNewLabel] = useState('')
   const [newIcon, setNewIcon] = useState('coffee')
   const [editingId, setEditingId] = useState(null)
   const [editLabel, setEditLabel] = useState('')
   const [loading, setLoading] = useState(false)
+  const [localHabits, setLocalHabits] = useState(habits)
+
+  // Keep localHabits in sync with new additions from parent
+  const merged = [
+    ...localHabits,
+    ...habits.filter(h => !localHabits.some(l => l.id === h.id)),
+  ]
+
+  // dnd-kit sensors — PointerSensor for mouse, TouchSensor for iOS
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  )
+
+  const handleDragEnd = async ({ active, over }) => {
+    if (!over || active.id === over.id) return
+
+    const oldIndex = merged.findIndex(h => h.id === active.id)
+    const newIndex = merged.findIndex(h => h.id === over.id)
+    const reordered = arrayMove(merged, oldIndex, newIndex)
+
+    setLocalHabits(reordered)
+
+    // Persist to Supabase
+    await Promise.all(
+      reordered.map((h, i) =>
+        supabase.from('habits').update({ position: i }).eq('id', h.id)
+      )
+    )
+  }
 
   const add = async (e) => {
     e.preventDefault()
@@ -37,13 +149,14 @@ export default function HabitsManager({ habits, userId, onClose }) {
       user_id: userId,
       label: newLabel.trim(),
       icon: newIcon,
-      position: habits.length,
+      position: merged.length,
     })
     setNewLabel('')
     setLoading(false)
   }
 
   const remove = async (id) => {
+    setLocalHabits(prev => prev.filter(h => h.id !== id))
     await supabase.from('habits').delete().eq('id', id)
   }
 
@@ -54,6 +167,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
 
   const saveEdit = async (id) => {
     if (editLabel.trim()) {
+      setLocalHabits(prev => prev.map(h => h.id === id ? { ...h, label: editLabel.trim() } : h))
       await supabase.from('habits').update({ label: editLabel.trim() }).eq('id', id)
     }
     setEditingId(null)
@@ -62,6 +176,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl">
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
           <h2 className="text-white font-semibold text-lg">Manage Habits</h2>
@@ -70,47 +185,27 @@ export default function HabitsManager({ habits, userId, onClose }) {
           </button>
         </div>
 
-        {/* Habit list */}
+        {/* Sortable habit list */}
         <div className="px-6 py-3 space-y-2 max-h-72 overflow-y-auto">
-          {habits.length === 0 && (
+          {merged.length === 0 && (
             <p className="text-slate-500 text-sm text-center py-4">No habits yet. Add one below.</p>
           )}
-          {habits.map(habit => (
-            <div key={habit.id} className="flex items-center gap-3 px-3 py-2.5 bg-slate-800/50 rounded-xl border border-slate-700/50 group">
-              <GripVertical className="w-4 h-4 text-slate-600 shrink-0" />
-              <span className="text-base shrink-0">{getEmoji(habit.icon)}</span>
-
-              {editingId === habit.id ? (
-                <input
-                  autoFocus
-                  value={editLabel}
-                  onChange={e => setEditLabel(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && saveEdit(habit.id)}
-                  className="flex-1 bg-slate-700 text-white text-sm px-2 py-1 rounded-lg outline-none border border-indigo-500"
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={merged.map(h => h.id)} strategy={verticalListSortingStrategy}>
+              {merged.map(habit => (
+                <SortableHabitRow
+                  key={habit.id}
+                  habit={habit}
+                  editingId={editingId}
+                  editLabel={editLabel}
+                  onEditLabel={setEditLabel}
+                  onStartEdit={startEdit}
+                  onSaveEdit={saveEdit}
+                  onRemove={remove}
                 />
-              ) : (
-                <span
-                  className="flex-1 text-sm text-slate-200 cursor-pointer hover:text-white"
-                  onClick={() => startEdit(habit)}
-                >
-                  {habit.label}
-                </span>
-              )}
-
-              {editingId === habit.id ? (
-                <button onClick={() => saveEdit(habit.id)} className="text-indigo-400 hover:text-indigo-300 cursor-pointer">
-                  <Check className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => remove(habit.id)}
-                  className="text-slate-600 hover:text-red-400 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* Add form */}
@@ -150,6 +245,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
             </div>
           </form>
         </div>
+
       </div>
     </div>
   )
