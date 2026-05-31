@@ -261,6 +261,7 @@ export default function App() {
           habits={habits}
           userId={session.user.id}
           onClose={() => setShowManager(false)}
+          isLight={isLight}
         />
       )}
       {showPrefs && (
@@ -366,7 +367,7 @@ export default function App() {
                 )
               )}
               {tab === 'week' && (
-                <WeeklyView habits={habits} log={weekLog} />
+                <WeeklyView habits={habits} log={weekLog} isLight={isLight} />
               )}
             </CardContent>
           </Card>

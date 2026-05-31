@@ -38,7 +38,7 @@ export function getEmoji(icon) {
 }
 
 // ─── Single sortable habit row ────────────────────────────────────────────────
-function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdit, onSaveEdit, onRemove }) {
+function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdit, onSaveEdit, onRemove, isLight }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id })
 
   const style = {
@@ -56,12 +56,12 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
         'flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors group select-none',
         isDragging
           ? 'bg-indigo-500/10 border-indigo-500/40 shadow-lg'
-          : 'bg-slate-800/50 border-slate-700/50'
+          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-800/50 border-slate-700/50'
       )}
     >
       {/* Drag handle — touch & mouse */}
       <button
-        className="text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing touch-none shrink-0"
+        className={cn('cursor-grab active:cursor-grabbing touch-none shrink-0', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300')}
         style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
         {...attributes}
         {...listeners}
@@ -77,11 +77,12 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
           value={editLabel}
           onChange={e => onEditLabel(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && onSaveEdit(habit.id)}
-          className="flex-1 bg-slate-700 text-white text-sm px-2 py-1 rounded-lg outline-none border border-indigo-500"
+          className={cn('flex-1 text-sm px-2 py-1 rounded-lg outline-none border border-indigo-500',
+            isLight ? 'bg-slate-100 text-slate-900' : 'bg-slate-700 text-white')}
         />
       ) : (
         <span
-          className="flex-1 text-sm text-slate-200 cursor-pointer hover:text-white"
+          className={cn('flex-1 text-sm cursor-pointer', isLight ? 'text-slate-700 hover:text-slate-900' : 'text-slate-200 hover:text-white')}
           onClick={() => onStartEdit(habit)}
         >
           {habit.label}
@@ -105,7 +106,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
 }
 
 // ─── Manager modal ────────────────────────────────────────────────────────────
-export default function HabitsManager({ habits, userId, onClose }) {
+export default function HabitsManager({ habits, userId, onClose, isLight }) {
   const [newLabel, setNewLabel] = useState('')
   const [newIcon, setNewIcon] = useState('coffee')
   const [editingId, setEditingId] = useState(null)
@@ -176,12 +177,14 @@ export default function HabitsManager({ habits, userId, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl">
+      <div className={cn('w-full max-w-md rounded-2xl shadow-2xl border',
+        isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-700')}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
-          <h2 className="text-white font-semibold text-lg">Manage Habits</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors cursor-pointer">
+        <div className={cn('flex items-center justify-between px-6 py-4 border-b',
+          isLight ? 'border-slate-200' : 'border-slate-700/50')}>
+          <h2 className={cn('font-semibold text-lg', isLight ? 'text-slate-900' : 'text-white')}>Manage Habits</h2>
+          <button onClick={onClose} className={cn('transition-colors cursor-pointer', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-400 hover:text-white')}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -189,7 +192,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
         {/* Sortable habit list */}
         <div className="px-6 py-3 space-y-2 max-h-72 overflow-y-auto">
           {merged.length === 0 && (
-            <p className="text-slate-500 text-sm text-center py-4">No habits yet. Add one below.</p>
+            <p className={cn('text-sm text-center py-4', isLight ? 'text-slate-400' : 'text-slate-500')}>No habits yet. Add one below.</p>
           )}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={merged.map(h => h.id)} strategy={verticalListSortingStrategy}>
@@ -203,6 +206,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
                   onStartEdit={startEdit}
                   onSaveEdit={saveEdit}
                   onRemove={remove}
+                  isLight={isLight}
                 />
               ))}
             </SortableContext>
@@ -210,7 +214,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
         </div>
 
         {/* Add form */}
-        <div className="px-6 py-4 border-t border-slate-700/50">
+        <div className={cn('px-6 py-4 border-t', isLight ? 'border-slate-200' : 'border-slate-700/50')}>
           <form onSubmit={add} className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {ICON_OPTIONS.map(o => (
@@ -222,7 +226,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
                     'w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all cursor-pointer',
                     newIcon === o.value
                       ? 'bg-indigo-500/30 border border-indigo-500/60 scale-110'
-                      : 'bg-slate-800 border border-slate-700 hover:bg-slate-700'
+                      : isLight ? 'bg-slate-100 border border-slate-200 hover:bg-slate-200' : 'bg-slate-800 border border-slate-700 hover:bg-slate-700'
                   )}
                 >
                   {o.emoji}
@@ -234,7 +238,10 @@ export default function HabitsManager({ habits, userId, onClose }) {
                 value={newLabel}
                 onChange={e => setNewLabel(e.target.value)}
                 placeholder="New habit name…"
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                className={cn('flex-1 px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:border-indigo-500 transition-colors',
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                    : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500')}
               />
               <button
                 type="submit"
