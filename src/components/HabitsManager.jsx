@@ -38,8 +38,9 @@ export function getEmoji(icon) {
 }
 
 // ─── Single sortable habit row ────────────────────────────────────────────────
-function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdit, onSaveEdit, onRemove, isLight, isLast }) {
+function SortableHabitRow({ habit, editingId, editLabel, editIcon, onEditLabel, onEditIcon, onStartEdit, onSaveEdit, onRemove, isLight, isLast }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id })
+  const isEditing = editingId === habit.id
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -53,52 +54,77 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 px-4 py-3.5 select-none',
+        'select-none',
         !isLast && (isLight ? 'border-b border-slate-100' : 'border-b border-white/5'),
         isDragging && 'bg-blue-500/5'
       )}
     >
-      <button
-        className={cn('cursor-grab active:cursor-grabbing touch-none shrink-0', isLight ? 'text-slate-300' : 'text-white/20')}
-        style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
-
-      <span className="text-base shrink-0">{getEmoji(habit.icon)}</span>
-
-      {editingId === habit.id ? (
-        <input
-          autoFocus
-          value={editLabel}
-          onChange={e => onEditLabel(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && onSaveEdit(habit.id)}
-          className={cn('flex-1 text-sm px-2 py-1 rounded-lg outline-none border border-blue-400',
-            isLight ? 'bg-slate-50 text-slate-900' : 'bg-white/10 text-white')}
-        />
-      ) : (
-        <span
-          className={cn('flex-1 text-[17px] font-medium cursor-pointer', isLight ? 'text-slate-800' : 'text-white/90')}
-          onClick={() => onStartEdit(habit)}
-        >
-          {habit.label}
-        </span>
-      )}
-
-      {editingId === habit.id ? (
-        <button onClick={() => onSaveEdit(habit.id)} className="text-blue-500 cursor-pointer shrink-0">
-          <Check className="w-4 h-4" />
-        </button>
-      ) : (
+      {/* Main row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
         <button
-          onClick={() => onRemove(habit.id)}
-          className={cn('cursor-pointer shrink-0 transition-opacity', isLight ? 'text-slate-300 hover:text-red-400' : 'text-white/20 hover:text-red-400')}
+          className={cn('cursor-grab active:cursor-grabbing touch-none shrink-0', isLight ? 'text-slate-300' : 'text-white/20')}
+          style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
+          {...attributes}
+          {...listeners}
         >
-          <Trash2 className="w-4 h-4" />
+          <GripVertical className="w-4 h-4" />
         </button>
+
+        <span className="text-lg shrink-0">{getEmoji(isEditing ? editIcon : habit.icon)}</span>
+
+        {isEditing ? (
+          <input
+            autoFocus
+            value={editLabel}
+            onChange={e => onEditLabel(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onSaveEdit(habit.id)}
+            className={cn('flex-1 text-[17px] px-2 py-1 rounded-lg outline-none border border-blue-400',
+              isLight ? 'bg-slate-50 text-slate-900' : 'bg-white/10 text-white')}
+          />
+        ) : (
+          <span
+            className={cn('flex-1 text-[17px] font-medium cursor-pointer', isLight ? 'text-slate-800' : 'text-white/90')}
+            onClick={() => onStartEdit(habit)}
+          >
+            {habit.label}
+          </span>
+        )}
+
+        {isEditing ? (
+          <button onClick={() => onSaveEdit(habit.id)} className="text-blue-500 cursor-pointer shrink-0 font-semibold text-sm">
+            Done
+          </button>
+        ) : (
+          <button
+            onClick={() => onRemove(habit.id)}
+            className={cn('cursor-pointer shrink-0 transition-colors', isLight ? 'text-slate-300 hover:text-red-400' : 'text-white/20 hover:text-red-400')}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Icon picker — shown only when editing */}
+      {isEditing && (
+        <div className={cn('px-4 pt-2 pb-3 flex flex-wrap gap-2', isLight ? 'border-t border-slate-100' : 'border-t border-white/5')}>
+          {ICON_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onEditIcon(o.value)}
+              className={cn(
+                'w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all cursor-pointer pt-3',
+                editIcon === o.value
+                  ? 'bg-blue-500/20 ring-1 ring-blue-500/50 scale-110'
+                  : isLight ? 'bg-slate-100 hover:bg-slate-200' : 'bg-white/8 hover:bg-white/12'
+              )}
+            >
+              {o.emoji}
+            </button>
+          ))}
+        </div>
       )}
+
     </div>
   )
 }
@@ -109,6 +135,7 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
   const [newIcon, setNewIcon] = useState('coffee')
   const [editingId, setEditingId] = useState(null)
   const [editLabel, setEditLabel] = useState('')
+  const [editIcon, setEditIcon] = useState('')
   const [loading, setLoading] = useState(false)
   const [localHabits, setLocalHabits] = useState(habits)
 
@@ -145,11 +172,11 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
     await supabase.from('habits').delete().eq('id', id)
   }
 
-  const startEdit = (habit) => { setEditingId(habit.id); setEditLabel(habit.label) }
+  const startEdit = (habit) => { setEditingId(habit.id); setEditLabel(habit.label); setEditIcon(habit.icon) }
   const saveEdit = async (id) => {
     if (editLabel.trim()) {
-      setLocalHabits(prev => prev.map(h => h.id === id ? { ...h, label: editLabel.trim() } : h))
-      await supabase.from('habits').update({ label: editLabel.trim() }).eq('id', id)
+      setLocalHabits(prev => prev.map(h => h.id === id ? { ...h, label: editLabel.trim(), icon: editIcon } : h))
+      await supabase.from('habits').update({ label: editLabel.trim(), icon: editIcon }).eq('id', id)
     }
     setEditingId(null)
   }
@@ -194,7 +221,9 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
                   habit={habit}
                   editingId={editingId}
                   editLabel={editLabel}
+                  editIcon={editIcon}
                   onEditLabel={setEditLabel}
+                  onEditIcon={setEditIcon}
                   onStartEdit={startEdit}
                   onSaveEdit={saveEdit}
                   onRemove={remove}
