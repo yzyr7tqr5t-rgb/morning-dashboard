@@ -101,12 +101,12 @@ export default function App() {
   const [tab, setTab] = useState('today') // today | week
   const [showManager, setShowManager] = useState(false)
   const [showPrefs, setShowPrefs] = useState(false)
-  const [prefs, setPrefs] = useState({
-    name: '',
-    theme: 'dark',
-    widget_quote: true,
-    widget_weather: true,
-    widget_streak: true,
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      const cached = localStorage.getItem('morning-prefs')
+      if (cached) return { name: '', widget_quote: true, widget_weather: true, widget_streak: true, ...JSON.parse(cached) }
+    } catch {}
+    return { name: '', theme: 'dark', widget_quote: true, widget_weather: true, widget_streak: true }
   })
 
   const quote = useMemo(() => QUOTES[new Date().getDay() % QUOTES.length], [])
@@ -124,7 +124,12 @@ export default function App() {
   useEffect(() => {
     if (!session) return
     supabase.from('user_prefs').select('*').eq('user_id', session.user.id).single()
-      .then(({ data }) => { if (data) setPrefs(data) })
+      .then(({ data }) => {
+        if (data) {
+          setPrefs(data)
+          localStorage.setItem('morning-prefs', JSON.stringify(data))
+        }
+      })
   }, [session])
 
   // Load habits from DB, seed defaults on first login
@@ -219,6 +224,7 @@ export default function App() {
 
   const savePrefs = useCallback(async (newPrefs) => {
     setPrefs(newPrefs)
+    localStorage.setItem('morning-prefs', JSON.stringify(newPrefs))
     await supabase.from('user_prefs').upsert({ ...newPrefs, user_id: session.user.id })
   }, [session])
 
