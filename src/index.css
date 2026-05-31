@@ -9,3 +9,11 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Prevent iOS text selection and callout during drag */
+[draggable],
+[data-dnd-kit-sortable] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

@@ -53,7 +53,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors group',
+        'flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors group select-none',
         isDragging
           ? 'bg-indigo-500/10 border-indigo-500/40 shadow-lg'
           : 'bg-slate-800/50 border-slate-700/50'
@@ -62,6 +62,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       {/* Drag handle — touch & mouse */}
       <button
         className="text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing touch-none shrink-0"
+        style={{ WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}
         {...attributes}
         {...listeners}
       >
@@ -121,7 +122,7 @@ export default function HabitsManager({ habits, userId, onClose }) {
   // dnd-kit sensors — PointerSensor for mouse, TouchSensor for iOS
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 100, tolerance: 8 } })
   )
 
   const handleDragEnd = async ({ active, over }) => {
