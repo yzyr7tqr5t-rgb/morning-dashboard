@@ -53,7 +53,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-3 px-4 py-3.5 select-none group',
+        'flex items-center gap-3 px-4 py-3.5 select-none',
         !isLast && (isLight ? 'border-b border-slate-100' : 'border-b border-white/5'),
         isDragging && 'bg-blue-500/5'
       )}
@@ -94,7 +94,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       ) : (
         <button
           onClick={() => onRemove(habit.id)}
-          className={cn('cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity', isLight ? 'text-red-400' : 'text-red-400/70')}
+          className={cn('cursor-pointer shrink-0 transition-opacity', isLight ? 'text-slate-300 hover:text-red-400' : 'text-white/20 hover:text-red-400')}
         >
           <Trash2 className="w-4 h-4" />
         </button>
