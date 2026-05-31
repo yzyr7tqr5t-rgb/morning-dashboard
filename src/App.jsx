@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
-import { Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, Circle, Flame, Moon, LogOut, Settings, BarChart2 } from 'lucide-react'
+import { Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, Circle, Flame, Moon, LogOut, Settings, BarChart2, SlidersHorizontal } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import Auth from '@/components/Auth'
 import HabitsManager, { getEmoji } from '@/components/HabitsManager'
 import WeeklyView from '@/components/WeeklyView'
+import PrefsManager from '@/components/PrefsManager'
 
 const QUOTES = [
   "The morning is wiser than the evening.",
@@ -28,7 +29,7 @@ function today() {
 }
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
-const Clock = memo(function Clock() {
+const Clock = memo(function Clock({ name, isLight }) {
   const [time, setTime] = useState(() => new Date())
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000)
@@ -39,14 +40,15 @@ const Clock = memo(function Clock() {
   const GreetIcon = hours < 17 ? Sun : Moon
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const dateStr = time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+  const greetingText = name ? `${greeting}, ${name}` : greeting
   return (
     <div className="text-center space-y-1 py-4">
-      <div className="flex items-center justify-center gap-2 text-indigo-300 mb-2">
+      <div className={cn('flex items-center justify-center gap-2 mb-2', isLight ? 'text-indigo-600' : 'text-indigo-300')}>
         <GreetIcon className="w-5 h-5" />
-        <span className="text-sm font-medium tracking-widest uppercase">{greeting}</span>
+        <span className="text-sm font-medium tracking-widest uppercase">{greetingText}</span>
       </div>
-      <h1 className="text-6xl font-bold text-white tabular-nums tracking-tight">{timeStr}</h1>
-      <p className="text-slate-400 text-lg">{dateStr}</p>
+      <h1 className={cn('text-6xl font-bold tabular-nums tracking-tight', isLight ? 'text-slate-900' : 'text-white')}>{timeStr}</h1>
+      <p className={cn('text-lg', isLight ? 'text-slate-500' : 'text-slate-400')}>{dateStr}</p>
     </div>
   )
 })
@@ -59,20 +61,24 @@ const WeatherIcon = memo(function WeatherIcon({ code }) {
 })
 
 // ─── Habit row ────────────────────────────────────────────────────────────────
-const HabitRow = memo(function HabitRow({ id, label, icon, checked, onToggle }) {
+const HabitRow = memo(function HabitRow({ id, label, icon, checked, onToggle, isLight }) {
   return (
     <button
       onClick={() => onToggle(id)}
       className={cn(
         'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left cursor-pointer',
         checked
-          ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200'
-          : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:bg-slate-800'
+          ? isLight
+            ? 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-700'
+            : 'bg-indigo-500/20 border border-indigo-500/40 text-indigo-200'
+          : isLight
+            ? 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+            : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:bg-slate-800'
       )}
     >
       {checked
-        ? <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
-        : <Circle className="w-5 h-5 text-slate-500 shrink-0" />
+        ? <CheckCircle2 className="w-5 h-5 text-indigo-500 shrink-0" />
+        : <Circle className={cn('w-5 h-5 shrink-0', isLight ? 'text-slate-400' : 'text-slate-500')} />
       }
       <span className="text-base shrink-0">{getEmoji(icon)}</span>
       <span className={cn('text-sm font-medium', checked && 'line-through opacity-60')}>{label}</span>
@@ -90,9 +96,18 @@ export default function App() {
   const [streak, setStreak] = useState(0)
   const [tab, setTab] = useState('today') // today | week
   const [showManager, setShowManager] = useState(false)
+  const [showPrefs, setShowPrefs] = useState(false)
+  const [prefs, setPrefs] = useState({
+    name: '',
+    theme: 'dark',
+    widget_quote: true,
+    widget_weather: true,
+    widget_streak: true,
+  })
 
   const quote = useMemo(() => QUOTES[new Date().getDay() % QUOTES.length], [])
   const done = useMemo(() => Object.values(checked).filter(Boolean).length, [checked])
+  const isLight = prefs.theme === 'light'
 
   // Auth
   useEffect(() => {
@@ -100,6 +115,13 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s))
     return () => subscription.unsubscribe()
   }, [])
+
+  // Load user prefs
+  useEffect(() => {
+    if (!session) return
+    supabase.from('user_prefs').select('*').eq('user_id', session.user.id).single()
+      .then(({ data }) => { if (data) setPrefs(data) })
+  }, [session])
 
   // Load habits from DB, seed defaults on first login
   useEffect(() => {
@@ -191,6 +213,11 @@ export default function App() {
     })
   }, [])
 
+  const savePrefs = useCallback(async (newPrefs) => {
+    setPrefs(newPrefs)
+    await supabase.from('user_prefs').upsert({ ...newPrefs, user_id: session.user.id })
+  }, [session])
+
   // Optimistic toggle
   const toggle = useCallback(async (id) => {
     if (!session) return
@@ -213,8 +240,22 @@ export default function App() {
   )
   if (!session) return <Auth />
 
+  const cardCls = isLight
+    ? 'bg-white/80 border-slate-200 backdrop-blur-sm'
+    : 'bg-slate-900/60 border-slate-700/50 backdrop-blur-sm'
+  const textPrimary = isLight ? 'text-slate-900' : 'text-white'
+  const textSecondary = isLight ? 'text-slate-500' : 'text-slate-400'
+  const tabBarCls = isLight ? 'bg-slate-100' : 'bg-slate-800/60'
+  const tabInactiveCls = isLight ? 'text-slate-500 hover:text-slate-700' : 'text-slate-400 hover:text-slate-200'
+  const progressTrackCls = isLight ? 'bg-slate-200' : 'bg-slate-800'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-4 md:p-8">
+    <div className={cn(
+      'min-h-screen p-4 md:p-8',
+      isLight
+        ? 'bg-gradient-to-br from-slate-100 via-white to-indigo-50'
+        : 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950'
+    )}>
       {showManager && (
         <HabitsManager
           habits={habits}
@@ -222,47 +263,64 @@ export default function App() {
           onClose={() => setShowManager(false)}
         />
       )}
+      {showPrefs && (
+        <PrefsManager
+          prefs={prefs}
+          onSave={savePrefs}
+          onClose={() => setShowPrefs(false)}
+        />
+      )}
 
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="relative">
-          <Clock />
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="absolute right-0 top-4 flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign out
-          </button>
+          <Clock name={prefs.name} isLight={isLight} />
+          <div className="absolute right-0 top-4 flex items-center gap-3">
+            <button
+              onClick={() => setShowPrefs(true)}
+              className={cn('flex items-center gap-1.5 text-xs transition-colors cursor-pointer', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300')}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Personalize
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className={cn('flex items-center gap-1.5 text-xs transition-colors cursor-pointer', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300')}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign out
+            </button>
+          </div>
         </div>
 
         {/* Quote */}
-        <Card className="bg-indigo-950/60 border-indigo-800/50 backdrop-blur-sm">
-          <CardContent className="py-5 px-6">
-            <p className="text-indigo-200 text-center italic text-base">"{quote}"</p>
-          </CardContent>
-        </Card>
+        {prefs.widget_quote && (
+          <Card className={cn(isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-indigo-950/60 border-indigo-800/50', 'backdrop-blur-sm')}>
+            <CardContent className="py-5 px-6">
+              <p className={cn('text-center italic text-base', isLight ? 'text-indigo-700' : 'text-indigo-200')}>"{quote}"</p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
           {/* Habits panel */}
-          <Card className="md:col-span-2 bg-slate-900/60 border-slate-700/50 backdrop-blur-sm">
-            {/* Tabs */}
+          <Card className={cn('md:col-span-2', cardCls)}>
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex gap-1 bg-slate-800/60 p-1 rounded-xl">
+                <div className={cn('flex gap-1 p-1 rounded-xl', tabBarCls)}>
                   <button
                     onClick={() => setTab('today')}
                     className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
-                      tab === 'today' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
+                      tab === 'today' ? 'bg-indigo-600 text-white' : tabInactiveCls)}
                   >
                     Today
                   </button>
                   <button
                     onClick={() => setTab('week')}
                     className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
-                      tab === 'week' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200')}
+                      tab === 'week' ? 'bg-indigo-600 text-white' : tabInactiveCls)}
                   >
                     <BarChart2 className="w-3.5 h-3.5" />
                     Week
@@ -270,7 +328,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setShowManager(true)}
-                  className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 text-xs transition-colors cursor-pointer"
+                  className={cn('flex items-center gap-1.5 text-xs transition-colors cursor-pointer', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-400 hover:text-slate-200')}
                 >
                   <Settings className="w-3.5 h-3.5" />
                   Manage
@@ -280,10 +338,10 @@ export default function App() {
               {tab === 'today' && (
                 <>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-white">Morning Habits</CardTitle>
-                    <span className="text-sm text-slate-400">{done}/{habits.length} done</span>
+                    <CardTitle className={textPrimary}>Morning Habits</CardTitle>
+                    <span className={cn('text-sm', textSecondary)}>{done}/{habits.length} done</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2">
+                  <div className={cn('w-full rounded-full h-1.5 mt-2', progressTrackCls)}>
                     <div
                       className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1.5 rounded-full transition-all duration-500"
                       style={{ width: habits.length ? `${(done / habits.length) * 100}%` : '0%' }}
@@ -291,19 +349,19 @@ export default function App() {
                   </div>
                 </>
               )}
-              {tab === 'week' && <CardTitle className="text-white">Weekly Overview</CardTitle>}
+              {tab === 'week' && <CardTitle className={textPrimary}>Weekly Overview</CardTitle>}
             </CardHeader>
 
             <CardContent className="space-y-2 mt-3">
               {tab === 'today' && (
                 habits.length === 0 ? (
-                  <p className="text-slate-500 text-sm text-center py-6">
+                  <p className={cn('text-sm text-center py-6', textSecondary)}>
                     No habits yet.{' '}
                     <button onClick={() => setShowManager(true)} className="text-indigo-400 hover:text-indigo-300 cursor-pointer underline">Add some →</button>
                   </p>
                 ) : (
                   habits.map(h => (
-                    <HabitRow key={h.id} id={h.id} label={h.label} icon={h.icon} checked={!!checked[h.id]} onToggle={toggle} />
+                    <HabitRow key={h.id} id={h.id} label={h.label} icon={h.icon} checked={!!checked[h.id]} onToggle={toggle} isLight={isLight} />
                   ))
                 )
               )}
@@ -316,52 +374,56 @@ export default function App() {
           {/* Side column */}
           <div className="space-y-4">
             {/* Weather */}
-            <Card className="bg-slate-900/60 border-slate-700/50 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-white text-base">Weather</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {weather ? (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <WeatherIcon code={weather.weathercode} />
-                      <span className="text-4xl font-bold text-white">{Math.round(weather.temperature_2m)}°</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-                        <Wind className="w-3.5 h-3.5" />
-                        <span>{Math.round(weather.windspeed_10m)} km/h</span>
+            {prefs.widget_weather && (
+              <Card className={cardCls}>
+                <CardHeader className="pb-2">
+                  <CardTitle className={cn('text-base', textPrimary)}>Weather</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {weather ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <WeatherIcon code={weather.weathercode} />
+                        <span className={cn('text-4xl font-bold', textPrimary)}>{Math.round(weather.temperature_2m)}°</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-                        <Droplets className="w-3.5 h-3.5" />
-                        <span>{weather.relativehumidity_2m}%</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className={cn('flex items-center gap-1.5 text-xs', textSecondary)}>
+                          <Wind className="w-3.5 h-3.5" />
+                          <span>{Math.round(weather.windspeed_10m)} km/h</span>
+                        </div>
+                        <div className={cn('flex items-center gap-1.5 text-xs', textSecondary)}>
+                          <Droplets className="w-3.5 h-3.5" />
+                          <span>{weather.relativehumidity_2m}%</span>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-slate-500 text-sm">Allow location for weather…</p>
-                )}
-              </CardContent>
-            </Card>
+                    </>
+                  ) : (
+                    <p className={cn('text-sm', textSecondary)}>Allow location for weather…</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Streak */}
-            <Card className="bg-slate-900/60 border-slate-700/50 backdrop-blur-sm">
-              <CardContent className="py-5 text-center space-y-1">
-                <div className="flex items-center justify-center gap-2">
-                  <Flame className="w-6 h-6 text-orange-400" />
-                  <span className="text-3xl font-bold text-white">{streak}</span>
-                </div>
-                <p className="text-slate-400 text-sm">day streak</p>
-                <p className="text-slate-500 text-xs">{session.user.email}</p>
-              </CardContent>
-            </Card>
+            {prefs.widget_streak && (
+              <Card className={cardCls}>
+                <CardContent className="py-5 text-center space-y-1">
+                  <div className="flex items-center justify-center gap-2">
+                    <Flame className="w-6 h-6 text-orange-400" />
+                    <span className={cn('text-3xl font-bold', textPrimary)}>{streak}</span>
+                  </div>
+                  <p className={cn('text-sm', textSecondary)}>day streak</p>
+                  <p className={cn('text-xs', isLight ? 'text-slate-400' : 'text-slate-500')}>{session.user.email}</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
 
         {tab === 'today' && done === habits.length && habits.length > 0 && (
           <Card className="bg-gradient-to-r from-indigo-500/20 to-violet-500/20 border-indigo-500/40 backdrop-blur-sm">
             <CardContent className="py-4 text-center">
-              <p className="text-indigo-200 font-medium">All habits complete — amazing start to the day! 🎉</p>
+              <p className={cn('font-medium', isLight ? 'text-indigo-700' : 'text-indigo-200')}>All habits complete — amazing start to the day! 🎉</p>
             </CardContent>
           </Card>
         )}
