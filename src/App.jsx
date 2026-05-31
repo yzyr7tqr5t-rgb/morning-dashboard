@@ -275,9 +275,8 @@ export default function App() {
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
-        <div className="relative">
-          <Clock name={prefs.name} isLight={isLight} />
-          <div className="absolute right-0 top-4 flex items-center gap-3">
+        <div>
+          <div className="flex justify-end gap-3">
             <button
               onClick={() => setShowPrefs(true)}
               className={cn('flex items-center gap-1.5 text-xs transition-colors cursor-pointer', isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300')}
@@ -293,6 +292,7 @@ export default function App() {
               Sign out
             </button>
           </div>
+          <Clock name={prefs.name} isLight={isLight} />
         </div>
 
         {/* Quote */}
