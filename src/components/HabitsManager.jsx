@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, GripVertical, X, Check } from 'lucide-react'
 import {
   DndContext,
@@ -105,8 +106,15 @@ function SortableHabitRow({ habit, editingId, editLabel, editIcon, onEditLabel, 
       </div>
 
       {/* Icon picker — shown only when editing */}
+      <AnimatePresence>
       {isEditing && (
-        <div className={cn('px-4 pt-2 pb-3 flex flex-wrap gap-2', isLight ? 'border-t border-slate-100' : 'border-t border-white/5')}>
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          style={{ overflow: 'hidden' }}
+          className={cn('px-4 pt-2 pb-3 flex flex-wrap gap-2', isLight ? 'border-t border-slate-100' : 'border-t border-white/5')}>
           {ICON_OPTIONS.map(o => (
             <button
               key={o.value}
@@ -122,8 +130,9 @@ function SortableHabitRow({ habit, editingId, editLabel, editIcon, onEditLabel, 
               {o.emoji}
             </button>
           ))}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
     </div>
   )
@@ -183,18 +192,30 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
 
   const divider = isLight ? 'border-t border-slate-100' : 'border-t border-white/6'
 
+  const isDesktop = window.innerWidth >= 768
+
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-      style={{ display: 'flex', alignItems: window.innerWidth >= 768 ? 'center' : 'flex-end', justifyContent: 'center', padding: window.innerWidth >= 768 ? '1rem' : '0' }}
+      style={{ display: 'flex', alignItems: isDesktop ? 'center' : 'flex-end', justifyContent: 'center', padding: isDesktop ? '1rem' : '0' }}
     >
-      <div className={cn(
-        'w-full shadow-2xl overflow-hidden',
-        window.innerWidth >= 768 ? 'rounded-3xl max-w-md' : 'rounded-t-3xl',
-        isLight ? 'bg-white' : 'bg-[#1c1c1e]'
-      )}>
+      <motion.div
+        initial={isDesktop ? { opacity: 0, scale: 0.95, y: 0 } : { y: '100%' }}
+        animate={isDesktop ? { opacity: 1, scale: 1, y: 0 } : { y: 0 }}
+        exit={isDesktop ? { opacity: 0, scale: 0.95 } : { y: '100%' }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className={cn(
+          'w-full shadow-2xl overflow-hidden',
+          isDesktop ? 'rounded-3xl max-w-md' : 'rounded-t-3xl',
+          isLight ? 'bg-white' : 'bg-[#1c1c1e]'
+        )}
+      >
         {/* Handle — only shown on mobile */}
-        {window.innerWidth < 768 && (
+        {!isDesktop && (
           <div className="flex justify-center pt-3 pb-1">
             <div className={cn('w-9 h-1 rounded-full', isLight ? 'bg-slate-200' : 'bg-white/20')} />
           </div>
@@ -216,8 +237,13 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={merged.map(h => h.id)} strategy={verticalListSortingStrategy}>
               {merged.map((habit, i) => (
-                <SortableHabitRow
+                <motion.div
                   key={habit.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04, type: 'spring', stiffness: 400, damping: 30 }}
+                >
+                <SortableHabitRow
                   habit={habit}
                   editingId={editingId}
                   editLabel={editLabel}
@@ -230,6 +256,7 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
                   isLight={isLight}
                   isLast={i === merged.length - 1}
                 />
+                </motion.div>
               ))}
             </SortableContext>
           </DndContext>
@@ -276,8 +303,8 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
           </form>
         </div>
 
-        {window.innerWidth < 768 && <div className="h-4" />}
-      </div>
-    </div>
+        {!isDesktop && <div className="h-4" />}
+      </motion.div>
+    </motion.div>
   )
 }

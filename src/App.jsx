@@ -283,9 +283,11 @@ export default function App() {
         ? 'bg-gradient-to-b from-slate-50 to-blue-50/60'
         : 'bg-gradient-to-b from-[#0a0a0f] via-[#0d0d18] to-[#0a0a14]'
     )}>
-      {showManager && (
-        <HabitsManager habits={habits} userId={session.user.id} onClose={() => setShowManager(false)} isLight={isLight} />
-      )}
+      <AnimatePresence>
+        {showManager && (
+          <HabitsManager habits={habits} userId={session.user.id} onClose={() => setShowManager(false)} isLight={isLight} />
+        )}
+      </AnimatePresence>
       {showPrefs && (
         <PrefsManager prefs={prefs} onSave={savePrefs} onClose={() => setShowPrefs(false)} />
       )}
