@@ -42,7 +42,7 @@ const Clock = memo(function Clock({ name, isLight }) {
   const greetingText = name ? `${greeting}, ${name}` : greeting
   return (
     <div className="text-center py-6">
-      <p className={cn('text-sm font-medium mb-1', isLight ? 'text-indigo-500' : 'text-indigo-300')}>{greetingText}</p>
+      <p className={cn('text-sm font-medium mb-1', isLight ? 'text-blue-500' : 'text-blue-300')}>{greetingText}</p>
       <h1 className={cn('font-bold tabular-nums tracking-tight leading-none', isLight ? 'text-slate-900' : 'text-white')}
           style={{ fontSize: 'clamp(4rem, 18vw, 6rem)', fontWeight: 700 }}>
         {timeStr}
@@ -72,7 +72,7 @@ const HabitRow = memo(function HabitRow({ id, label, icon, checked, onToggle, is
       {/* Clean single-layer circle indicator */}
       <span className={cn(
         'w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all duration-200',
-        checked ? 'bg-indigo-500' : isLight ? 'border-[1.5px] border-slate-300' : 'border-[1.5px] border-white/25'
+        checked ? 'bg-blue-500' : isLight ? 'border-[1.5px] border-slate-300' : 'border-[1.5px] border-white/25'
       )}>
         {checked && (
           <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
@@ -80,8 +80,8 @@ const HabitRow = memo(function HabitRow({ id, label, icon, checked, onToggle, is
           </svg>
         )}
       </span>
-      <span className="text-[15px] shrink-0 leading-none">{getEmoji(icon)}</span>
-      <span className={cn('text-[15px] font-medium flex-1 leading-snug',
+      <span className="text-lg shrink-0 leading-none">{getEmoji(icon)}</span>
+      <span className={cn('text-[17px] font-medium flex-1 leading-snug',
         checked
           ? isLight ? 'line-through text-slate-300' : 'line-through text-white/30'
           : isLight ? 'text-slate-800' : 'text-white/90'
@@ -244,8 +244,8 @@ export default function App() {
   }, [session, checked])
 
   if (session === undefined) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (!session) return <Auth />
@@ -263,8 +263,8 @@ export default function App() {
     <div className={cn(
       'min-h-screen px-4 py-3 md:px-8 md:py-6',
       isLight
-        ? 'bg-gradient-to-b from-slate-50 to-indigo-50/60'
-        : 'bg-gradient-to-b from-slate-950 via-[#0f0f1a] to-[#0d0d20]'
+        ? 'bg-gradient-to-b from-slate-50 to-blue-50/60'
+        : 'bg-gradient-to-b from-[#0a0a0f] via-[#0d0d18] to-[#0a0a14]'
     )}>
       {showManager && (
         <HabitsManager habits={habits} userId={session.user.id} onClose={() => setShowManager(false)} isLight={isLight} />
@@ -294,9 +294,9 @@ export default function App() {
         {prefs.widget_quote && (
           <div className="px-2">
             <p className={cn('text-center text-sm leading-relaxed', isLight ? 'text-slate-400' : 'text-slate-500')}>
-              <span className={cn('text-2xl leading-none align-bottom mr-0.5 font-serif', isLight ? 'text-indigo-300' : 'text-indigo-700')}>"</span>
+              <span className={cn('text-2xl leading-none align-bottom mr-0.5 font-serif', isLight ? 'text-blue-300' : 'text-blue-700')}>"</span>
               {quote}
-              <span className={cn('text-2xl leading-none align-bottom ml-0.5 font-serif', isLight ? 'text-indigo-300' : 'text-indigo-700')}>"</span>
+              <span className={cn('text-2xl leading-none align-bottom ml-0.5 font-serif', isLight ? 'text-blue-300' : 'text-blue-700')}>"</span>
             </p>
           </div>
         )}
@@ -309,19 +309,19 @@ export default function App() {
             <div className={cn('flex gap-0.5 p-1 rounded-xl', segmentBg)}>
               <button
                 onClick={() => setTab('today')}
-                className={cn('px-3.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer', tab === 'today' ? segmentActive : segmentInactive)}
+                className={cn('px-3.5 py-1.5 rounded-lg text-[15px] font-semibold transition-all cursor-pointer', tab === 'today' ? segmentActive : segmentInactive)}
               >
                 Today
               </button>
               <button
                 onClick={() => setTab('week')}
-                className={cn('flex items-center gap-1 px-3.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer', tab === 'week' ? segmentActive : segmentInactive)}
+                className={cn('flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-[15px] font-semibold transition-all cursor-pointer', tab === 'week' ? segmentActive : segmentInactive)}
               >
                 <BarChart2 className="w-3 h-3" />
                 Week
               </button>
             </div>
-            <button onClick={() => setShowManager(true)} className={cn('text-xs font-semibold cursor-pointer', isLight ? 'text-indigo-500 hover:text-indigo-700' : 'text-indigo-400 hover:text-indigo-300')}>
+            <button onClick={() => setShowManager(true)} className={cn('text-[15px] font-semibold cursor-pointer', isLight ? 'text-blue-500 hover:text-blue-700' : 'text-blue-400 hover:text-blue-300')}>
               Edit
             </button>
           </div>
@@ -331,14 +331,14 @@ export default function App() {
               {/* Progress header */}
               <div className="px-5 pt-3 pb-1">
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className={cn('text-xs font-medium', isLight ? 'text-slate-400' : 'text-white/40')}>
+                  <span className={cn('text-sm font-medium', isLight ? 'text-slate-400' : 'text-white/40')}>
                     {done < habits.length ? `${habits.length - done} remaining` : 'All done'}
                   </span>
-                  <span className={cn('text-xs font-semibold tabular-nums', isLight ? 'text-slate-500' : 'text-white/50')}>{done}/{habits.length}</span>
+                  <span className={cn('text-sm font-semibold tabular-nums', isLight ? 'text-slate-500' : 'text-white/50')}>{done}/{habits.length}</span>
                 </div>
                 <div className={cn('w-full rounded-full', isLight ? 'bg-slate-100' : 'bg-white/8')} style={{ height: '2px' }}>
                   <div
-                    className={cn('h-full rounded-full transition-all duration-500', done === habits.length ? 'bg-emerald-400' : 'bg-indigo-500')}
+                    className={cn('h-full rounded-full transition-all duration-500', done === habits.length ? 'bg-emerald-400' : 'bg-blue-500')}
                     style={{ width: habits.length ? `${(done / habits.length) * 100}%` : '0%' }}
                   />
                 </div>
@@ -348,7 +348,7 @@ export default function App() {
               {habits.length === 0 ? (
                 <p className={cn('text-sm text-center py-8', textSecondary)}>
                   No habits yet.{' '}
-                  <button onClick={() => setShowManager(true)} className="text-indigo-500 cursor-pointer font-medium">Add some</button>
+                  <button onClick={() => setShowManager(true)} className="text-blue-500 cursor-pointer font-medium">Add some</button>
                 </p>
               ) : (
                 <div className="pb-1">

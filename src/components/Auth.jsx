@@ -36,11 +36,11 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-indigo-50/60 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/60 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         {/* App icon */}
         <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-200">
             <Sun className="w-10 h-10 text-white" />
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function Auth() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors cursor-pointer shadow-sm shadow-indigo-200"
+            className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors cursor-pointer shadow-sm shadow-blue-200"
           >
             {loading ? 'Loading…' : mode === 'magic' ? 'Send magic link' : mode === 'signup' ? 'Create account' : 'Sign in'}
           </button>
@@ -87,18 +87,18 @@ export default function Auth() {
 
         <div className="flex flex-col gap-3 mt-6 items-center">
           {mode !== 'magic' && (
-            <button onClick={() => setMode('magic')} className="text-sm text-indigo-500 hover:text-indigo-700 font-medium cursor-pointer">
+            <button onClick={() => setMode('magic')} className="text-sm text-blue-500 hover:text-blue-700 font-medium cursor-pointer">
               Use magic link instead
             </button>
           )}
           {mode === 'login' && (
             <button onClick={() => setMode('signup')} className="text-sm text-slate-400 hover:text-slate-600 cursor-pointer">
-              Don't have an account? <span className="text-indigo-500 font-medium">Sign up</span>
+              Don't have an account? <span className="text-blue-500 font-medium">Sign up</span>
             </button>
           )}
           {(mode === 'signup' || mode === 'magic') && (
             <button onClick={() => setMode('login')} className="text-sm text-slate-400 hover:text-slate-600 cursor-pointer">
-              Already have an account? <span className="text-indigo-500 font-medium">Sign in</span>
+              Already have an account? <span className="text-blue-500 font-medium">Sign in</span>
             </button>
           )}
         </div>

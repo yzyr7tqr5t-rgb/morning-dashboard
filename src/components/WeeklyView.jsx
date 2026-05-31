@@ -49,8 +49,8 @@ export default function WeeklyView({ habits, log, isLight }) {
                 <div
                   className={cn(
                     'absolute bottom-0 left-0 right-0 rounded-lg transition-all duration-500',
-                    pct === 100 ? 'bg-indigo-500' :
-                    pct >= 60  ? 'bg-indigo-400/70' :
+                    pct === 100 ? 'bg-blue-500' :
+                    pct >= 60  ? 'bg-blue-400/70' :
                     pct > 0    ? (isLight ? 'bg-slate-300' : 'bg-white/20') :
                                  'bg-transparent'
                   )}
@@ -59,7 +59,7 @@ export default function WeeklyView({ habits, log, isLight }) {
               </div>
               <span className={cn('text-[10px] font-medium',
                 label === 'Today'
-                  ? (isLight ? 'text-indigo-500' : 'text-indigo-400')
+                  ? (isLight ? 'text-blue-500' : 'text-blue-400')
                   : secondary
               )}>
                 {label}
@@ -85,7 +85,7 @@ export default function WeeklyView({ habits, log, isLight }) {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className={cn('text-sm font-medium',
                     isToday
-                      ? (isLight ? 'text-indigo-600' : 'text-indigo-400')
+                      ? (isLight ? 'text-blue-600' : 'text-blue-400')
                       : (isLight ? 'text-slate-700' : 'text-white/80')
                   )}>
                     {isToday ? 'Today' : new Date(date + 'T12:00:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -100,7 +100,7 @@ export default function WeeklyView({ habits, log, isLight }) {
                         className={cn(
                           'text-[11px] px-2 py-0.5 rounded-full flex items-center gap-0.5',
                           done.has(h.id)
-                            ? (isLight ? 'bg-indigo-100 text-indigo-600' : 'bg-indigo-500/20 text-indigo-300')
+                            ? (isLight ? 'bg-blue-100 text-blue-600' : 'bg-blue-500/20 text-blue-300')
                             : (isLight ? 'text-slate-300' : 'text-white/20')
                         )}
                       >

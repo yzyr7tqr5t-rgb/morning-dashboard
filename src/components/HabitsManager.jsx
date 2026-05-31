@@ -55,7 +55,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       className={cn(
         'flex items-center gap-3 px-4 py-3.5 select-none group',
         !isLast && (isLight ? 'border-b border-slate-100' : 'border-b border-white/5'),
-        isDragging && 'bg-indigo-500/5'
+        isDragging && 'bg-blue-500/5'
       )}
     >
       <button
@@ -75,12 +75,12 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
           value={editLabel}
           onChange={e => onEditLabel(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && onSaveEdit(habit.id)}
-          className={cn('flex-1 text-sm px-2 py-1 rounded-lg outline-none border border-indigo-400',
+          className={cn('flex-1 text-sm px-2 py-1 rounded-lg outline-none border border-blue-400',
             isLight ? 'bg-slate-50 text-slate-900' : 'bg-white/10 text-white')}
         />
       ) : (
         <span
-          className={cn('flex-1 text-[15px] font-medium cursor-pointer', isLight ? 'text-slate-800' : 'text-white/90')}
+          className={cn('flex-1 text-[17px] font-medium cursor-pointer', isLight ? 'text-slate-800' : 'text-white/90')}
           onClick={() => onStartEdit(habit)}
         >
           {habit.label}
@@ -88,7 +88,7 @@ function SortableHabitRow({ habit, editingId, editLabel, onEditLabel, onStartEdi
       )}
 
       {editingId === habit.id ? (
-        <button onClick={() => onSaveEdit(habit.id)} className="text-indigo-500 cursor-pointer shrink-0">
+        <button onClick={() => onSaveEdit(habit.id)} className="text-blue-500 cursor-pointer shrink-0">
           <Check className="w-4 h-4" />
         </button>
       ) : (
@@ -218,7 +218,7 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
                 className={cn(
                   'w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all cursor-pointer',
                   newIcon === o.value
-                    ? 'bg-indigo-500/20 ring-1 ring-indigo-500/50 scale-110'
+                    ? 'bg-blue-500/20 ring-1 ring-blue-500/50 scale-110'
                     : isLight ? 'bg-slate-100 hover:bg-slate-200' : 'bg-white/8 hover:bg-white/12'
                 )}
               >
@@ -233,14 +233,14 @@ export default function HabitsManager({ habits, userId, onClose, isLight }) {
               onChange={e => setNewLabel(e.target.value)}
               placeholder="New habit name…"
               className={cn(
-                'flex-1 px-4 py-2.5 rounded-2xl text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all',
+                'flex-1 px-4 py-3 rounded-2xl text-[17px] focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
                 isLight ? 'bg-slate-100 text-slate-900 placeholder-slate-400' : 'bg-white/8 text-white placeholder-white/30'
               )}
             />
             <button
               type="submit"
               disabled={loading || !newLabel.trim()}
-              className="w-10 h-10 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              className="w-10 h-10 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-30 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
             >
               <Plus className="w-4 h-4" />
             </button>

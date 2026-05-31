@@ -46,7 +46,7 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Luc"
               className={cn(
-                'w-full rounded-lg px-3 py-2 text-sm border outline-none focus:ring-2 focus:ring-indigo-500/50',
+                'w-full rounded-lg px-3 py-2 text-sm border outline-none focus:ring-2 focus:ring-blue-500/50',
                 form.theme === 'light'
                   ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400'
                   : 'bg-slate-800 border-slate-600 text-white placeholder:text-slate-500'
@@ -68,7 +68,7 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
                   className={cn(
                     'flex-1 py-1.5 rounded-lg text-sm font-medium capitalize transition-all cursor-pointer',
                     form.theme === t
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : form.theme === 'light' ? 'text-slate-500 hover:text-slate-700' : 'text-slate-400 hover:text-slate-200'
                   )}
                 >
@@ -98,7 +98,7 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
                     onClick={() => toggle(key)}
                     className={cn(
                       'relative w-10 h-5.5 rounded-full transition-colors cursor-pointer',
-                      form[key] ? 'bg-indigo-600' : form.theme === 'light' ? 'bg-slate-200' : 'bg-slate-700'
+                      form[key] ? 'bg-blue-600' : form.theme === 'light' ? 'bg-slate-200' : 'bg-slate-700'
                     )}
                   >
                     <span className={cn(
@@ -123,7 +123,7 @@ export default function PrefsManager({ prefs, onSave, onClose }) {
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 py-2 rounded-xl text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer transition-colors"
+            className="flex-1 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition-colors"
           >
             Save
           </button>
