@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, Circle, Flame, Moon, LogOut, Settings, BarChart2, SlidersHorizontal } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -62,31 +63,47 @@ const WeatherIcon = memo(function WeatherIcon({ code }) {
 // ─── Habit row ────────────────────────────────────────────────────────────────
 const HabitRow = memo(function HabitRow({ id, label, icon, checked, onToggle, isLight, isLast }) {
   return (
-    <button
+    <motion.button
       onClick={() => onToggle(id)}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       className={cn(
-        'w-full flex items-center gap-3.5 px-5 py-4 text-left cursor-pointer active:opacity-50 transition-opacity duration-100',
+        'w-full flex items-center gap-3.5 px-5 py-4 text-left cursor-pointer',
         !isLast && (isLight ? 'border-b border-slate-100' : 'border-b border-white/6')
       )}
     >
-      {/* Clean single-layer circle indicator */}
-      <span className={cn(
-        'w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all duration-200',
-        checked ? 'bg-blue-500' : isLight ? 'border-[1.5px] border-slate-300' : 'border-[1.5px] border-white/25'
-      )}>
-        {checked && (
-          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
-            <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+      {/* Animated check circle */}
+      <motion.span
+        animate={checked ? { scale: [1, 1.25, 1], backgroundColor: '#3b82f6' } : { scale: 1, backgroundColor: 'transparent' }}
+        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+        className={cn(
+          'w-5 h-5 rounded-full shrink-0 flex items-center justify-center',
+          !checked && (isLight ? 'border-[1.5px] border-slate-300' : 'border-[1.5px] border-white/25')
         )}
-      </span>
+      >
+        <AnimatePresence>
+          {checked && (
+            <motion.svg
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+              className="w-2.5 h-2.5 text-white"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
+              <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </motion.svg>
+          )}
+        </AnimatePresence>
+      </motion.span>
       <span className="text-lg shrink-0 leading-none">{getEmoji(icon)}</span>
       <span className={cn('text-[17px] font-medium flex-1 leading-snug',
         checked
           ? isLight ? 'line-through text-slate-300' : 'line-through text-white/30'
           : isLight ? 'text-slate-800' : 'text-white/90'
       )}>{label}</span>
-    </button>
+    </motion.button>
   )
 })
 
@@ -302,7 +319,11 @@ export default function App() {
         )}
 
         {/* Habits card */}
-        <div className={cn('rounded-3xl overflow-hidden', isLight ? 'bg-white shadow-sm' : 'bg-white/8 ring-1 ring-white/10')}>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.1 }}
+          className={cn('rounded-3xl overflow-hidden', isLight ? 'bg-white shadow-sm' : 'bg-white/8 ring-1 ring-white/10')}>
           {/* Card top bar */}
           <div className={cn('flex items-center justify-between px-4 pt-4 pb-3', isLight ? 'border-b border-slate-100' : 'border-b border-white/5')}>
             {/* iOS segmented control */}
@@ -353,7 +374,14 @@ export default function App() {
               ) : (
                 <div className="pb-1">
                   {habits.map((h, i) => (
-                    <HabitRow key={h.id} id={h.id} label={h.label} icon={h.icon} checked={!!checked[h.id]} onToggle={toggle} isLight={isLight} isLast={i === habits.length - 1} />
+                    <motion.div
+                      key={h.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, type: 'spring', stiffness: 400, damping: 30 }}
+                    >
+                      <HabitRow id={h.id} label={h.label} icon={h.icon} checked={!!checked[h.id]} onToggle={toggle} isLight={isLight} isLast={i === habits.length - 1} />
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -365,7 +393,7 @@ export default function App() {
               <WeeklyView habits={habits} log={weekLog} isLight={isLight} />
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Side widgets */}
         <div className="grid grid-cols-2 gap-3">
@@ -404,11 +432,19 @@ export default function App() {
         </div>
 
         {/* All done banner */}
-        {tab === 'today' && done === habits.length && habits.length > 0 && (
-          <div className={cn('rounded-3xl px-5 py-4 text-center', isLight ? 'bg-emerald-50 border border-emerald-100' : 'bg-emerald-500/10 ring-1 ring-emerald-500/20')}>
-            <p className={cn('font-medium text-sm', isLight ? 'text-emerald-700' : 'text-emerald-400')}>All done — great start to the day 🎉</p>
-          </div>
-        )}
+        <AnimatePresence>
+          {tab === 'today' && done === habits.length && habits.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className={cn('rounded-3xl px-5 py-4 text-center', isLight ? 'bg-emerald-50 border border-emerald-100' : 'bg-emerald-500/10 ring-1 ring-emerald-500/20')}
+            >
+              <p className={cn('font-medium text-sm', isLight ? 'text-emerald-700' : 'text-emerald-400')}>All done — great start to the day 🎉</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Email footer */}
         <p className={cn('text-center text-xs pb-2', isLight ? 'text-slate-300' : 'text-slate-600')}>{session.user.email}</p>
