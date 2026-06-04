@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, Circle, Flame, Moon, LogOut, Settings, BarChart2, SlidersHorizontal } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { calculateStreak } from '@/lib/streak'
 import { supabase } from '@/lib/supabase'
 import Auth from '@/components/Auth'
 import HabitsManager, { getEmoji } from '@/components/HabitsManager'
@@ -217,17 +218,7 @@ export default function App() {
     supabase.from('habits_log').select('date').eq('user_id', session.user.id)
       .order('date', { ascending: false })
       .then(({ data }) => {
-        if (!data?.length) return setStreak(0)
-        const dates = [...new Set(data.map(r => r.date))].sort().reverse()
-        let count = 0
-        let cursor = new Date()
-        for (const d of dates) {
-          const diff = Math.round((cursor - new Date(d)) / 86400000)
-          if (diff > 1) break
-          count++
-          cursor = new Date(d)
-        }
-        setStreak(count)
+        setStreak(calculateStreak(data?.map(r => r.date) ?? []))
       })
   }, [session])
 
