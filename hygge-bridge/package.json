@@ -1,0 +1,19 @@
+{
+  "name": "hygge-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Leest een temperatuursensor uit Niko Home Control II en stuurt de Seitron Hygge (via de Hygge Way gateway) aan.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "devices": "node --env-file=.env src/list-devices.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mqtt": "^5.16.0"
+  }
+}

@@ -18,4 +18,9 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // hygge-bridge is een Node.js-service, geen browsercode
+    files: ['hygge-bridge/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])
