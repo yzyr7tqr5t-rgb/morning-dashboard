@@ -2,9 +2,9 @@
 
 Een kleine webpagina voor je gsm die:
 
-- de temperatuur van een sensor in **Niko Home Control II** **toont** (alleen tonen, er gebeurt niets mee), en
 - de **Seitron Hygge**-thermostaat (via de **Hygge Way**-gateway) **bedient**: op een temperatuur zetten of
-  terug naar zijn weekprogramma.
+  terug naar zijn weekprogramma, en
+- ter info de temperatuur van een sensor in **Niko Home Control II** toont (er gebeurt verder niets mee).
 
 De Hygge regelt de ketel zelf, op zijn eigen thermometer.
 
@@ -18,10 +18,10 @@ De Hygge regelt de ketel zelf, op zijn eigen thermometer.
 
 | Onderdeel            | Wat het doet                                                               |
 |----------------------|----------------------------------------------------------------------------|
-| **Niko**             | Temperatuur van je Niko-sensor en hoe lang geleden gemeten                 |
 | **Hygge-thermostaat**| Huidige stand: *Manueel · 21,0 °C*, *Weekprogramma* of *Nog geen opdracht* |
 | **− / +**            | Zet de Hygge manueel op die temperatuur (stappen van 0,5 °C)               |
 | **Weekprogramma**    | Aan: Hygge volgt zijn programma uit de Seitron-app. Uit: terug naar de gekozen temperatuur |
+| **Niko (ter info)**  | Temperatuur van je Niko-sensor en hoe lang geleden gemeten                 |
 | **Grafiek**          | Niko-temperatuur en de temperatuur die op de Hygge is ingesteld            |
 
 Goed om te weten:

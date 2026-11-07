@@ -89,6 +89,13 @@
   .now .age { font-size: 13px; color: var(--text-muted); }
 
   .section-title { font-weight: 600; margin-bottom: 10px; }
+  .hero { text-align: center; padding: 18px 16px 16px; }
+  .hero .target { margin: 14px 0 4px; }
+  .hero .target .num { font-size: 52px; letter-spacing: -0.02em; }
+  .info { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+  .info-title { font-size: 14px; color: var(--text-secondary); }
+  .info .sub { font-size: 12px; color: var(--text-muted); }
+  .info-temp { font-size: 20px; font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .pill {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 15px;
@@ -156,25 +163,17 @@
 
   <div class="banner" id="banner" hidden></div>
 
-  <section class="card now" aria-live="polite">
-    <div class="label" id="sensorName">Niko</div>
-    <div class="temp" id="temp">–<small> °C</small></div>
-    <div class="age" id="age">nog geen meting</div>
-  </section>
-
-  <section class="card">
+  <section class="card hero" aria-live="polite">
     <div class="section-title">Hygge-thermostaat</div>
     <div class="pill" id="pill"><span class="swatch"></span><span id="pillText">Nog geen opdracht</span></div>
-    <div class="reason" id="reason"></div>
-
-    <div class="target" style="margin-top:14px">
+    <div class="target">
       <button class="round" id="minus" aria-label="Hygge 0,5 graden lager">−</button>
       <div class="value">
-        <div class="label">Temperatuur Hygge</div>
         <div class="num" id="target">– °C</div>
       </div>
       <button class="round" id="plus" aria-label="Hygge 0,5 graden hoger">+</button>
     </div>
+    <div class="reason" id="reason"></div>
     <div class="hint">De Hygge regelt de ketel zelf, op zijn eigen thermometer.</div>
   </section>
 
@@ -191,13 +190,21 @@
     </div>
   </section>
 
+  <section class="card info">
+    <div>
+      <div class="info-title" id="sensorName">Niko</div>
+      <div class="sub" id="age">nog geen meting</div>
+    </div>
+    <div class="info-temp" id="temp">– °C</div>
+  </section>
+
   <section class="card">
     <div class="chart-head">
       <div class="title">Temperatuur</div>
       <div class="sub" id="range" style="font-size:12px;color:var(--text-muted)"></div>
     </div>
     <div class="legend">
-      <span><i class="key-line"></i>Gemeten door Niko</span>
+      <span><i class="key-line"></i>Niko (ter info)</span>
       <span><i class="key-setpoint"></i>Ingesteld op Hygge</span>
     </div>
     <div class="chart" id="chart">
@@ -264,8 +271,8 @@ function render() {
   $('banner').textContent = banner;
 
   $('sensorName').textContent = `Niko · ${niko.sensorName}`;
-  $('temp').innerHTML = `${fmt(niko.temperature)}<small> °C</small>`;
-  $('age').textContent = niko.lastReadingAt ? `gemeten ${ago(niko.lastReadingAt)}` : 'nog geen meting';
+  $('temp').textContent = `${fmt(niko.temperature)} °C`;
+  $('age').textContent = `ter info · ${niko.lastReadingAt ? `gemeten ${ago(niko.lastReadingAt)}` : 'nog geen meting'}`;
 
   const [cls, text] = sending ? ['', 'Versturen…']
     : hygge.mode === 'manual' ? ['manual', `Manueel · ${fmt(hygge.setpoint)} °C`]
