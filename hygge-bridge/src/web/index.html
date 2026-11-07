@@ -88,13 +88,14 @@
   .now .temp small { font-size: 28px; font-weight: 500; color: var(--text-secondary); }
   .now .age { font-size: 13px; color: var(--text-muted); }
 
+  .section-title { font-weight: 600; margin-bottom: 10px; }
   .pill {
-    display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 15px;
     background: var(--btn); color: var(--text-primary);
   }
   .pill .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
-  .pill.heat .swatch { background: var(--heat); }
+  .pill.manual .swatch { background: var(--heat); }
   .pill.auto .swatch { background: var(--auto); }
   .reason { margin-top: 8px; font-size: 13px; color: var(--text-secondary); min-height: 1.4em; }
 
@@ -130,7 +131,7 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .key-line { width: 14px; height: 2px; background: var(--series-1); border-radius: 1px; }
   .key-target { width: 14px; border-top: 2px dashed var(--text-muted); }
-  .key-heat { width: 12px; height: 10px; background: var(--heat-soft); border-bottom: 2px solid var(--heat); }
+  .key-setpoint { width: 14px; border-top: 2px dashed var(--heat); }
   .chart { position: relative; touch-action: pan-y; }
   .chart svg { display: block; width: 100%; height: 180px; overflow: visible; }
   .chart .empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; color: var(--text-muted); }
@@ -156,33 +157,35 @@
   <div class="banner" id="banner" hidden></div>
 
   <section class="card now" aria-live="polite">
-    <div class="label" id="sensorName">Sensor</div>
+    <div class="label" id="sensorName">Niko</div>
     <div class="temp" id="temp">–<small> °C</small></div>
     <div class="age" id="age">nog geen meting</div>
-    <div class="pill" id="pill"><span class="swatch"></span><span id="pillText">Wacht op meting</span></div>
-    <div class="reason" id="reason"></div>
   </section>
 
   <section class="card">
-    <div class="target">
-      <button class="round" id="minus" aria-label="Doel 0,5 graden lager">−</button>
+    <div class="section-title">Hygge-thermostaat</div>
+    <div class="pill" id="pill"><span class="swatch"></span><span id="pillText">Nog geen opdracht</span></div>
+    <div class="reason" id="reason"></div>
+
+    <div class="target" style="margin-top:14px">
+      <button class="round" id="minus" aria-label="Hygge 0,5 graden lager">−</button>
       <div class="value">
-        <div class="label">Doeltemperatuur</div>
+        <div class="label">Temperatuur Hygge</div>
         <div class="num" id="target">– °C</div>
       </div>
-      <button class="round" id="plus" aria-label="Doel 0,5 graden hoger">+</button>
+      <button class="round" id="plus" aria-label="Hygge 0,5 graden hoger">+</button>
     </div>
-    <div class="hint" id="hint"></div>
+    <div class="hint">De Hygge regelt de ketel zelf, op zijn eigen thermometer.</div>
   </section>
 
   <section class="card">
     <div class="row">
       <div>
-        <div class="title">Pauzeren</div>
-        <div class="sub">Hygge volgt dan zijn eigen weekprogramma</div>
+        <div class="title">Weekprogramma</div>
+        <div class="sub">Hygge volgt zijn eigen programma uit de Seitron-app</div>
       </div>
       <label class="switch">
-        <input type="checkbox" id="pause" role="switch" aria-label="Bridge pauzeren">
+        <input type="checkbox" id="schedule" role="switch" aria-label="Weekprogramma">
         <span class="track"><span class="knob"></span></span>
       </label>
     </div>
@@ -194,9 +197,8 @@
       <div class="sub" id="range" style="font-size:12px;color:var(--text-muted)"></div>
     </div>
     <div class="legend">
-      <span><i class="key-line"></i>Gemeten</span>
-      <span><i class="key-target"></i>Doel</span>
-      <span><i class="key-heat"></i>Ketel aan</span>
+      <span><i class="key-line"></i>Gemeten door Niko</span>
+      <span><i class="key-setpoint"></i>Ingesteld op Hygge</span>
     </div>
     <div class="chart" id="chart">
       <svg id="svg" role="img" aria-label="Temperatuurverloop"></svg>
@@ -216,8 +218,9 @@ const time = (t) => new Date(t).toLocaleTimeString('nl-BE', { hour: '2-digit', m
 let status = null;
 let pendingTarget = null;
 let targetTimer = null;
-
+let sending = false;
 let errorText = '';
+
 function showError(text) {
   errorText = text;
   if (status) render();
@@ -251,80 +254,90 @@ function ago(t) {
 }
 
 function render() {
-  const s = status;
-  $('dot').className = s.connected ? 'dot on' : 'dot';
-  $('connText').textContent = s.connected ? (s.demo ? 'demo' : 'verbonden met Niko') : 'geen verbinding met Niko';
+  const { niko, hygge } = status;
+  $('dot').className = niko.connected ? 'dot on' : 'dot';
+  $('connText').textContent = niko.connected ? (status.demo ? 'demo' : 'verbonden met Niko') : 'geen verbinding met Niko';
 
-  const banner = s.demo ? 'Demomodus: de temperatuur is gesimuleerd en er gaat niets naar je ketel.'
-    : s.dryRun ? 'Testmodus (DRY_RUN): er gaat niets naar je ketel.' : '';
+  const banner = status.demo ? 'Demomodus: de Niko-temperatuur is gesimuleerd en er gaat niets naar de Hygge.'
+    : status.dryRun ? 'Testmodus (DRY_RUN): er gaat niets naar de Hygge.' : '';
   $('banner').hidden = !banner;
   $('banner').textContent = banner;
 
-  $('sensorName').textContent = s.sensorName;
-  $('temp').innerHTML = `${fmt(s.temperature)}<small> °C</small>`;
-  $('age').textContent = s.lastReadingAt ? `gemeten ${ago(s.lastReadingAt)}` : 'nog geen meting';
+  $('sensorName').textContent = `Niko · ${niko.sensorName}`;
+  $('temp').innerHTML = `${fmt(niko.temperature)}<small> °C</small>`;
+  $('age').textContent = niko.lastReadingAt ? `gemeten ${ago(niko.lastReadingAt)}` : 'nog geen meting';
 
-  const pill = $('pill');
-  const [cls, text] = s.paused ? ['auto', 'Gepauzeerd · weekprogramma']
-    : s.mode === 'heat' ? ['heat', 'Ketel aan']
-    : s.mode === 'idle' ? ['', 'Ketel uit']
-    : s.mode === 'auto' ? ['auto', 'Weekprogramma Hygge']
-    : ['', 'Wacht op meting'];
-  pill.className = `pill ${cls}`;
+  const [cls, text] = sending ? ['', 'Versturen…']
+    : hygge.mode === 'manual' ? ['manual', `Manueel · ${fmt(hygge.setpoint)} °C`]
+    : hygge.mode === 'auto' ? ['auto', 'Weekprogramma']
+    : ['', 'Nog geen opdracht verstuurd'];
+  $('pill').className = `pill ${cls}`;
   $('pillText').textContent = text;
 
-  const lc = s.lastCommand;
-  let reason = s.reason && s.reason !== 'geen wijziging' ? s.reason : '';
-  if (lc && !lc.ok) reason = `Laatste opdracht mislukt: ${lc.reason}`;
+  const last = hygge.last;
+  let reason = '';
+  if (last && last.ok) reason = `Verstuurd om ${time(last.at)}`;
+  if (last && !last.ok) reason = `Niet gelukt om ${time(last.at)}: ${last.error}`;
   if (errorText) reason = errorText;
-  else if (lc && !reason) reason = `Laatste opdracht om ${time(lc.at)}: ${lc.setpoint != null ? fmt(lc.setpoint) + ' °C' : 'weekprogramma'}`;
   $('reason').textContent = reason;
-  $('reason').className = (lc && !lc.ok) || errorText ? 'reason error' : 'reason';
+  $('reason').className = (last && !last.ok) || errorText ? 'reason error' : 'reason';
 
-  const target = pendingTarget ?? s.target;
+  const target = pendingTarget ?? hygge.setpoint;
   $('target').textContent = `${fmt(target)} °C`;
-  $('minus').disabled = target <= s.bounds.min;
-  $('plus').disabled = target >= s.bounds.max;
-  $('hint').textContent = `Ketel aan onder ${fmt(target - s.hysteresis)} °C, uit boven ${fmt(target + s.hysteresis)} °C`;
+  $('target').style.opacity = hygge.mode === 'auto' && pendingTarget == null ? 0.45 : 1;
+  $('minus').disabled = target <= hygge.bounds.min;
+  $('plus').disabled = target >= hygge.bounds.max;
 
-  $('pause').checked = s.paused;
+  $('schedule').checked = hygge.mode === 'auto';
   $('foot').textContent = `Bijgewerkt om ${new Date().toLocaleTimeString('nl-BE')}`;
-  drawChart(s.history, target);
+  drawChart(status.history);
+}
+
+async function send(path, body, failText) {
+  sending = true;
+  render();
+  try {
+    status = await api(path, body);
+  } catch (e) {
+    showError(`${failText}: ${e.message}`);
+  }
+  sending = false;
+  render();
 }
 
 function changeTarget(delta) {
-  const base = pendingTarget ?? status.target;
-  pendingTarget = Math.min(status.bounds.max, Math.max(status.bounds.min, base + delta));
+  const { min, max } = status.hygge.bounds;
+  const base = pendingTarget ?? status.hygge.setpoint;
+  pendingTarget = Math.min(max, Math.max(min, base + delta));
   render();
+  // even wachten zodat meerdere tikken samen één opdracht worden
   clearTimeout(targetTimer);
   targetTimer = setTimeout(async () => {
-    try { status = await api('api/target', { target: pendingTarget }); }
-    catch (e) { showError(`Kon doel niet aanpassen: ${e.message}`); }
-    pendingTarget = null;
+    const target = pendingTarget;
+    await send('api/target', { target }, 'Kon temperatuur niet instellen');
+    if (pendingTarget === target) pendingTarget = null;
     render();
-  }, 700);
+  }, 1200);
 }
 
 $('minus').onclick = () => changeTarget(-0.5);
 $('plus').onclick = () => changeTarget(0.5);
-$('pause').onchange = async (e) => {
-  try { status = await api('api/pause', { paused: e.target.checked }); render(); }
-  catch (err) { showError(`Pauzeren lukt niet: ${err.message}`); refresh(); }
-};
+$('schedule').onchange = (e) => send('api/schedule', { schedule: e.target.checked }, 'Weekprogramma wijzigen lukt niet');
 
 // --- Grafiek ------------------------------------------------------------------
 let chartGeom = null;
 
-function drawChart(history, target) {
+function drawChart(history) {
   const svg = $('svg');
   const W = svg.clientWidth || 320, H = 180;
   const pad = { l: 34, r: 8, t: 10, b: 22 };
-  $('empty').hidden = history.length >= 2;
-  if (history.length < 2) { svg.innerHTML = ''; chartGeom = null; $('range').textContent = ''; return; }
+  const points = history.filter((p) => p[1] != null);
+  $('empty').hidden = points.length >= 2;
+  if (points.length < 2) { svg.innerHTML = ''; chartGeom = null; $('range').textContent = ''; return; }
 
-  const t0 = history[0][0], t1 = history.at(-1)[0];
-  const temps = history.map((p) => p[1]).concat([target]);
-  let lo = Math.floor(Math.min(...temps) - 0.5), hi = Math.ceil(Math.max(...temps) + 0.5);
+  const t0 = points[0][0], t1 = points.at(-1)[0];
+  const values = points.flatMap((p) => p[2] == null ? [p[1]] : [p[1], p[2]]);
+  const lo = Math.floor(Math.min(...values) - 0.5), hi = Math.ceil(Math.max(...values) + 0.5);
   const x = (t) => pad.l + (t - t0) / Math.max(1, t1 - t0) * (W - pad.l - pad.r);
   const y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
 
@@ -333,55 +346,48 @@ function drawChart(history, target) {
     : `laatste ${(Math.round(mins / 30) / 2).toLocaleString('nl-BE')} u`;
 
   let out = '';
-  // rasterlijnen + y-as
   const step = hi - lo > 6 ? 2 : 1;
   for (let v = lo; v <= hi; v += step) {
     out += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
     out += `<text x="${pad.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${v}°</text>`;
   }
-  // periodes "ketel aan"
-  for (let i = 0; i < history.length - 1; i++) {
-    if (!history[i][2]) continue;
-    let j = i;
-    while (j < history.length - 1 && history[j][2]) j++;
-    const x1 = x(history[i][0]), x2 = x(history[j][0]);
-    out += `<rect x="${x1}" y="${pad.t}" width="${Math.max(1, x2 - x1)}" height="${H - pad.t - pad.b}" fill="var(--heat-soft)"/>`;
-    out += `<rect x="${x1}" y="${H - pad.b - 3}" width="${Math.max(1, x2 - x1)}" height="3" fill="var(--heat)"/>`;
-    i = j - 1;
+  // ingesteld op Hygge: trapjeslijn, onderbroken waar het weekprogramma actief was
+  let sp = '';
+  for (let i = 0; i < points.length; i++) {
+    const v = points[i][2];
+    if (v == null) continue;
+    const prev = i > 0 ? points[i - 1][2] : null;
+    sp += prev == null ? `M${x(points[i][0]).toFixed(1)},${y(v).toFixed(1)}` : `H${x(points[i][0]).toFixed(1)}V${y(v).toFixed(1)}`;
   }
-  // doel
-  out += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(target)}" y2="${y(target)}" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-  // gemeten
-  const d = history.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('');
+  if (sp) out += `<path d="${sp}" fill="none" stroke="var(--heat)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+  // gemeten door Niko
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('');
   out += `<path d="${d}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  // tijd-as
   out += `<text x="${pad.l}" y="${H - 4}" font-size="11" fill="var(--text-muted)">${time(t0)}</text>`;
   out += `<text x="${W - pad.r}" y="${H - 4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${time(t1)}</text>`;
-  // hover-laag
   out += `<line id="cross" x1="0" x2="0" y1="${pad.t}" y2="${H - pad.b}" stroke="var(--text-secondary)" stroke-width="1" visibility="hidden"/>`;
   out += `<circle id="crossDot" r="4.5" fill="var(--series-1)" stroke="var(--card)" stroke-width="2" visibility="hidden"/>`;
   svg.innerHTML = out;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  chartGeom = { history, x, y };
+  chartGeom = { points, x, y };
 }
 
 function showTip(clientX) {
   if (!chartGeom) return;
-  const svg = $('svg');
-  const rect = svg.getBoundingClientRect();
+  const rect = $('svg').getBoundingClientRect();
   const px = clientX - rect.left;
-  const { history, x, y } = chartGeom;
+  const { points, x, y } = chartGeom;
   let best = 0;
-  for (let i = 1; i < history.length; i++) if (Math.abs(x(history[i][0]) - px) < Math.abs(x(history[best][0]) - px)) best = i;
-  const [t, v, heat] = history[best];
+  for (let i = 1; i < points.length; i++) if (Math.abs(x(points[i][0]) - px) < Math.abs(x(points[best][0]) - px)) best = i;
+  const [t, v, setpoint] = points[best];
   const cx = x(t);
   const cross = $('cross'), dot = $('crossDot');
   cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
   dot.setAttribute('cx', cx); dot.setAttribute('cy', y(v)); dot.setAttribute('visibility', 'visible');
   const tip = $('tip');
   tip.hidden = false;
-  tip.textContent = `${time(t)} · ${fmt(v)} °C${heat ? ' · ketel aan' : ''}`;
-  tip.style.left = `${Math.min(rect.width - 70, Math.max(70, cx))}px`;
+  tip.textContent = `${time(t)} · Niko ${fmt(v)} °C · Hygge ${setpoint == null ? 'weekprogr.' : fmt(setpoint) + ' °C'}`;
+  tip.style.left = `${Math.min(rect.width - 110, Math.max(110, cx))}px`;
   tip.style.top = '-6px';
 }
 

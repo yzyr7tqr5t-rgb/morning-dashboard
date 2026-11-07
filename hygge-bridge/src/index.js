@@ -1,11 +1,13 @@
-// Hygge-bridge: Niko Home Control temperatuursensor -> Seitron Hygge Way.
+// Hygge-bridge: toont de temperatuur van Niko Home Control en stuurt de
+// Seitron Hygge (via Hygge Way en IFTTT) vanaf een webpagina.
+// De Hygge regelt de verwarming zelf, op zijn eigen thermometer.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { loadConfig, targetBounds } from './config.js';
+import { loadConfig } from './config.js';
 import { NikoClient } from './niko.js';
 import { DemoSensor } from './demo.js';
 import { SeitronHygge } from './seitron.js';
-import { decide, initialState } from './controller.js';
+import { HyggeControl } from './hygge.js';
 import { createWebServer } from './web.js';
 
 const log = {
@@ -14,66 +16,25 @@ const log = {
 };
 
 const config = loadConfig();
-const state = initialState();
-const bounds = targetBounds(config.control);
-restoreSettings();
+const seitron = new SeitronHygge(config.seitron, { dryRun: config.dryRun, log });
+const hygge = new HyggeControl(seitron, config.hygge, loadSaved());
+const sensor = config.demo ? new DemoSensor() : new NikoClient(config.niko);
 
-const sensor = config.demo
-  ? new DemoSensor({ getMode: () => state.mode })
-  : new NikoClient(config.niko);
-const hygge = new SeitronHygge(config.seitron, { dryRun: config.dryRun, log });
+// --- Niko-temperatuur (alleen om te tonen) ------------------------------------
 
-// Gegevens voor de webpagina
 const HISTORY_STEP_MS = config.demo ? 10_000 : 60_000;
 const HISTORY_MAX = 1440;
-const history = []; // [tijdstip, temperatuur, verwarmt (0/1)]
+const history = []; // [tijdstip, Niko-temperatuur, Hygge-setpoint of null bij weekprogramma]
 let sensorName = config.niko.sensorName || 'Sensor';
 let connected = false;
-let lastCommand = null;
-let lastReason = 'wacht op eerste meting';
+let temperature = null;
+let lastReadingAt = null;
 
-let busy = false;
-let again = false;
-
-async function evaluate() {
-  if (busy) {
-    again = true;
-    return;
-  }
-  busy = true;
-  try {
-    const now = Date.now();
-    const { command, reason } = decide(state, now, config.control);
-    lastReason = reason;
-    if (!command) return;
-
-    if (command.mode === 'auto') {
-      log.info(`Hygge -> eigen weekprogramma (${reason})`);
-      await hygge.scheduledMode();
-    } else {
-      log.info(`Hygge -> ${command.setpoint} °C (${reason})`);
-      await hygge.setTemperature(command.setpoint);
-    }
-    state.mode = command.mode;
-    state.lastCommandAt = now;
-    lastCommand = { at: now, ...command, reason, ok: true };
-  } catch (err) {
-    log.error('commando naar Seitron mislukt:', err.message);
-    lastCommand = { at: Date.now(), ok: false, reason: err.message };
-  } finally {
-    busy = false;
-    if (again) {
-      again = false;
-      evaluate();
-    }
-  }
-}
-
-function recordHistory(temperature) {
+function recordHistory() {
   const now = Date.now();
-  const point = [now, temperature, state.mode === 'heat' ? 1 : 0];
+  const point = [now, temperature, hygge.mode === 'manual' ? hygge.setpoint : null];
   const last = history.at(-1);
-  if (last && now - last[0] < HISTORY_STEP_MS) history[history.length - 1] = [last[0], temperature, point[2]];
+  if (last && now - last[0] < HISTORY_STEP_MS) history[history.length - 1] = [last[0], point[1], point[2]];
   else history.push(point);
   const cutoff = now - 24 * 60 * 60_000;
   while (history.length > HISTORY_MAX || (history.length && history[0][0] < cutoff)) history.shift();
@@ -90,100 +51,76 @@ sensor.on('offline', () => {
   log.error('verbinding met Niko verbroken, opnieuw proberen…');
 });
 sensor.on('error', (err) => log.error(err.message));
-sensor.on('temperature', (temperature, device) => {
+sensor.on('temperature', (value, device) => {
   connected = true;
   if (device.Name) sensorName = device.Name;
-  if (temperature !== state.lastTemperature) {
-    log.info(`${sensorName}: ${temperature.toFixed(1)} °C (doel ${config.control.targetTemp} °C)`);
-  }
-  state.lastTemperature = temperature;
-  state.lastReadingAt = Date.now();
-  recordHistory(temperature);
-  evaluate();
+  if (temperature === null || value.toFixed(1) !== temperature.toFixed(1)) log.info(`${sensorName}: ${value.toFixed(1)} °C`);
+  temperature = value;
+  lastReadingAt = Date.now();
+  recordHistory();
 });
 
-// Ook zonder nieuwe meting regelmatig evalueren (failsafe, herhalingen, schakeltijd).
-const timer = setInterval(evaluate, config.demo ? 5_000 : 60_000);
+// --- Hygge aansturen vanaf de webpagina -----------------------------------------
 
-// --- Webpagina ---------------------------------------------------------------
+async function setTemperature(value) {
+  const result = await hygge.setTemperature(value);
+  report(result);
+}
+
+async function setSchedule(on) {
+  const result = await hygge.setSchedule(on);
+  report(result);
+}
+
+function report(result) {
+  saveState();
+  if (temperature !== null) recordHistory();
+  const what = result.mode === 'auto' ? 'weekprogramma' : `${result.setpoint} °C`;
+  if (result.ok) log.info(`Hygge -> ${what}`);
+  else log.error(`Hygge -> ${what} mislukt: ${result.error}`);
+}
 
 function getStatus() {
   return {
-    sensorName,
-    connected,
-    temperature: state.lastTemperature,
-    lastReadingAt: state.lastReadingAt,
-    target: config.control.targetTemp,
-    hysteresis: config.control.hysteresis,
-    bounds,
-    mode: state.mode,
-    paused: state.paused,
-    reason: lastReason,
-    lastCommand,
+    niko: { sensorName, connected, temperature, lastReadingAt },
+    hygge,
     history,
     demo: config.demo,
     dryRun: config.dryRun,
   };
 }
 
-function setTarget(target) {
-  const clamped = Math.min(bounds.max, Math.max(bounds.min, Math.round(target * 2) / 2));
-  if (clamped === config.control.targetTemp) return;
-  config.control.targetTemp = clamped;
-  log.info(`Doeltemperatuur aangepast naar ${clamped} °C (webpagina)`);
-  saveSettings();
-  evaluate();
-}
-
-function setPaused(paused) {
-  if (paused === state.paused) return;
-  state.paused = paused;
-  log.info(paused ? 'Gepauzeerd via de webpagina' : 'Hervat via de webpagina');
-  saveSettings();
-  evaluate();
-}
-
-function restoreSettings() {
+function loadSaved() {
   try {
-    const saved = JSON.parse(readFileSync(config.stateFile, 'utf8'));
-    if (typeof saved.targetTemp === 'number') {
-      config.control.targetTemp = Math.min(bounds.max, Math.max(bounds.min, saved.targetTemp));
-    }
-    state.paused = saved.paused === true;
+    return JSON.parse(readFileSync(config.stateFile, 'utf8'));
   } catch {
-    // geen opgeslagen instellingen: waarden uit .env gebruiken
+    return {}; // eerste start
   }
 }
 
-function saveSettings() {
+function saveState() {
   try {
-    writeFileSync(config.stateFile, JSON.stringify({ targetTemp: config.control.targetTemp, paused: state.paused }));
+    writeFileSync(config.stateFile, JSON.stringify(hygge.saved()));
   } catch (err) {
-    log.error('kon instellingen niet bewaren:', err.message);
+    log.error('kon stand niet bewaren:', err.message);
   }
 }
 
-const web = config.web.port > 0 ? createWebServer({ getStatus, setTarget, setPaused }) : null;
+const web = config.web.port > 0 ? createWebServer({ getStatus, setTemperature, setSchedule }) : null;
 web?.listen(config.web.port, config.web.host, () => {
   log.info(`Webpagina op http://${config.web.host === '0.0.0.0' ? '<ip-van-deze-computer>' : config.web.host}:${config.web.port}`);
 });
 
 // --- Starten en stoppen --------------------------------------------------------
 
-const modeLabel = config.demo ? ' (DEMO: gesimuleerde sensor, er wordt niets verstuurd)'
-  : config.dryRun ? ' (DRY_RUN: er wordt niets verstuurd)' : '';
+const modeLabel = config.demo ? ' (DEMO: gesimuleerde Niko-sensor, er gaat niets naar de Hygge)'
+  : config.dryRun ? ' (DRY_RUN: er gaat niets naar de Hygge)' : '';
 log.info(`Hygge-bridge gestart${modeLabel}`);
 sensor.connect();
 
 async function shutdown(signal) {
-  log.info(`${signal} ontvangen, Hygge terug naar eigen weekprogramma en afsluiten…`);
-  clearInterval(timer);
+  log.info(`${signal} ontvangen, afsluiten…`);
   web?.close();
-  try {
-    if (state.mode && state.mode !== 'auto') await hygge.scheduledMode();
-  } catch (err) {
-    log.error('kon Hygge niet terugzetten:', err.message);
-  }
   await sensor.close();
   process.exit(0);
 }

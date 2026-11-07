@@ -1,7 +1,7 @@
 # systemd-unit om de bridge automatisch te starten (bv. op een Raspberry Pi).
 # Kopieer naar /etc/systemd/system/ en pas User en WorkingDirectory aan.
 [Unit]
-Description=Hygge-bridge (Niko Home Control -> Seitron Hygge Way)
+Description=Hygge-bridge (Niko-temperatuur tonen, Seitron Hygge bedienen)
 After=network-online.target
 Wants=network-online.target
 

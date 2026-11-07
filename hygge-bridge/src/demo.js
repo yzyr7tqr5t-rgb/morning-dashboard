@@ -1,12 +1,10 @@
-// Gesimuleerde temperatuursensor voor DEMO=true: zelfde events als NikoClient.
-// De kamer warmt op zolang de "ketel" brandt en koelt af als hij uit staat.
+// Gesimuleerde Niko-temperatuursensor voor DEMO=true: zelfde events als NikoClient.
 
 import { EventEmitter } from 'node:events';
 
 export class DemoSensor extends EventEmitter {
-  constructor({ getMode, start = 19.2, intervalMs = 5_000 }) {
+  constructor({ start = 20.4, intervalMs = 10_000 } = {}) {
     super();
-    this.getMode = getMode;
     this.temperature = start;
     this.intervalMs = intervalMs;
     this.timer = null;
@@ -22,10 +20,9 @@ export class DemoSensor extends EventEmitter {
   }
 
   tick() {
-    const heating = this.getMode() === 'heat';
-    const drift = heating ? 0.08 : -0.04;
-    const noise = (Math.random() - 0.5) * 0.02;
-    this.temperature = Math.round((this.temperature + drift + noise) * 100) / 100;
+    // Rustig schommelen rond 20,5 °C
+    const pull = (20.5 - this.temperature) * 0.05;
+    this.temperature = Math.round((this.temperature + pull + (Math.random() - 0.5) * 0.1) * 100) / 100;
     this.emit('temperature', this.temperature, { Name: 'Woonkamer (demo)' });
   }
 

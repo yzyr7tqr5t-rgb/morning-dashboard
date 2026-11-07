@@ -19,7 +19,7 @@ function bool(env, key) {
 }
 
 export function loadConfig(env = process.env, { needSeitron = true } = {}) {
-  // DEMO: gesimuleerde sensor, er wordt niets naar Niko of Seitron gestuurd.
+  // DEMO: gesimuleerde Niko-sensor, er wordt niets naar Seitron gestuurd.
   const demo = bool(env, 'DEMO');
   const dryRun = demo || bool(env, 'DRY_RUN');
   const needNiko = !demo;
@@ -39,14 +39,10 @@ export function loadConfig(env = process.env, { needSeitron = true } = {}) {
       eventSetTemperature: env.IFTTT_EVENT_SET_TEMPERATURE || 'hygge_set_temperature',
       eventAuto: env.IFTTT_EVENT_AUTO || 'hygge_auto',
     },
-    control: {
-      targetTemp: num(env, 'TARGET_TEMP', 21),
-      hysteresis: num(env, 'HYSTERESIS', 0.3),
-      heatSetpoint: num(env, 'HEAT_SETPOINT', 25),
-      idleSetpoint: num(env, 'IDLE_SETPOINT', 12),
-      minSwitchIntervalMs: num(env, 'MIN_SWITCH_INTERVAL_MIN', demo ? 1 : 10) * 60_000,
-      staleAfterMs: num(env, 'STALE_AFTER_MIN', 30) * 60_000,
-      resendAfterMs: num(env, 'RESEND_AFTER_MIN', 60) * 60_000,
+    hygge: {
+      defaultSetpoint: num(env, 'DEFAULT_SETPOINT', 20),
+      min: num(env, 'MIN_SETPOINT', 10),
+      max: num(env, 'MAX_SETPOINT', 28),
     },
     web: {
       port: num(env, 'WEB_PORT', 8080),
@@ -60,21 +56,10 @@ export function loadConfig(env = process.env, { needSeitron = true } = {}) {
   if (needSeitron && needNiko && !config.niko.sensorName && !config.niko.sensorUuid) {
     throw new Error('Geef NIKO_SENSOR_NAME of NIKO_SENSOR_UUID op');
   }
-  const c = config.control;
-  if (c.hysteresis < 0) throw new Error('HYSTERESIS mag niet negatief zijn');
-  if (c.heatSetpoint <= c.targetTemp + c.hysteresis) {
-    throw new Error('HEAT_SETPOINT moet duidelijk hoger liggen dan TARGET_TEMP + HYSTERESIS');
-  }
-  if (c.idleSetpoint >= c.targetTemp - c.hysteresis) {
-    throw new Error('IDLE_SETPOINT moet duidelijk lager liggen dan TARGET_TEMP - HYSTERESIS');
+  const h = config.hygge;
+  if (h.min >= h.max) throw new Error('MIN_SETPOINT moet lager zijn dan MAX_SETPOINT');
+  if (h.defaultSetpoint < h.min || h.defaultSetpoint > h.max) {
+    throw new Error('DEFAULT_SETPOINT moet tussen MIN_SETPOINT en MAX_SETPOINT liggen');
   }
   return config;
-}
-
-/** Grenzen waarbinnen de doeltemperatuur via de webpagina mag bewegen. */
-export function targetBounds({ heatSetpoint, idleSetpoint, hysteresis }) {
-  return {
-    min: Math.ceil((idleSetpoint + hysteresis + 0.5) * 2) / 2,
-    max: Math.floor((heatSetpoint - hysteresis - 0.5) * 2) / 2,
-  };
 }

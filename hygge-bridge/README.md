@@ -1,28 +1,38 @@
 # Hygge-bridge
 
-Leest een temperatuursensor uit **Niko Home Control II** en stuurt daarmee de
-**Seitron Hygge** (via de **Hygge Way**-gateway) aan. Zo regelt je verwarming op
-de temperatuur die Niko meet, in plaats van op de sensor in de Hygge-thermostaat zelf.
+Een kleine webpagina voor je gsm die:
+
+- de temperatuur van een sensor in **Niko Home Control II** **toont** (alleen tonen, er gebeurt niets mee), en
+- de **Seitron Hygge**-thermostaat (via de **Hygge Way**-gateway) **bedient**: op een temperatuur zetten of
+  terug naar zijn weekprogramma.
+
+De Hygge regelt de ketel zelf, op zijn eigen thermometer.
 
 ```
- Niko-sensor ──MQTT/TLS──▶ hygge-bridge ──HTTPS──▶ IFTTT ──▶ Seitron Smart-cloud ──▶ Hygge Way ──▶ ketel
- (lokaal, Hobby API)       (Raspberry Pi/PC)        (Webhooks)   (officiële service)
+ Niko-sensor ──MQTT/TLS──▶ hygge-bridge ──▶ webpagina op je gsm   (temperatuur tonen)
+                                │
+       webpagina: − / + ────────┴──HTTPS──▶ IFTTT ──▶ Seitron-cloud ──▶ Hygge Way ──▶ Hygge ──▶ ketel
 ```
 
-## Hoe het regelt
+## De pagina
 
-| Niko meet                                | Bridge stuurt naar de Hygge             |
-|------------------------------------------|-----------------------------------------|
-| lager dan `TARGET_TEMP − HYSTERESIS`     | `HEAT_SETPOINT` (bv. 25 °C) → ketel aan |
-| hoger dan `TARGET_TEMP + HYSTERESIS`     | `IDLE_SETPOINT` (bv. 12 °C) → ketel uit |
-| daartussen                               | niets, huidige toestand blijft          |
-| `STALE_AFTER_MIN` geen meting            | Hygge terug naar eigen weekprogramma    |
-| bridge stopt (Ctrl+C / systemd stop)     | Hygge terug naar eigen weekprogramma    |
+| Onderdeel            | Wat het doet                                                               |
+|----------------------|----------------------------------------------------------------------------|
+| **Niko**             | Temperatuur van je Niko-sensor en hoe lang geleden gemeten                 |
+| **Hygge-thermostaat**| Huidige stand: *Manueel · 21,0 °C*, *Weekprogramma* of *Nog geen opdracht* |
+| **− / +**            | Zet de Hygge manueel op die temperatuur (stappen van 0,5 °C)               |
+| **Weekprogramma**    | Aan: Hygge volgt zijn programma uit de Seitron-app. Uit: terug naar de gekozen temperatuur |
+| **Grafiek**          | Niko-temperatuur en de temperatuur die op de Hygge is ingesteld            |
 
-Tussen twee wissels zit minstens `MIN_SWITCH_INTERVAL_MIN` minuten (ketel sparen,
-IFTTT-limieten). Valt de bridge of je netwerk weg, dan valt de Hygge dus altijd
-terug op zijn eigen programma: je zit nooit in de kou. `IDLE_SETPOINT` werkt ook
-als vorstbeveiliging.
+Goed om te weten:
+
+- De pagina weet alleen wat **zij zelf** naar de Hygge stuurde. Pas je de Hygge aan op het toestel of in de
+  Seitron Smart-app, dan ziet de pagina dat niet. Seitron heeft geen koppeling om de stand uit te lezen.
+- "Verstuurd" betekent dat IFTTT de opdracht aannam. Het kan enkele seconden tot een minuut duren voor de
+  Hygge ze uitvoert.
+- Bij het opstarten stuurt de bridge **niets** naar de Hygge; enkel wanneer jij op de pagina iets kiest.
+  De laatst gekozen stand wordt bewaard in `state.json`.
+- De pagina heeft geen wachtwoord: gebruik ze alleen in je thuisnetwerk en zet poort 8080 **niet** open in je router.
 
 ## Wat heb je nodig
 
@@ -65,24 +75,15 @@ npm run devices          # toont alle Niko-toestellen met een temperatuur
 Zet de juiste naam (of UUID) in `NIKO_SENSOR_NAME` / `NIKO_SENSOR_UUID`. Test daarna eerst droog:
 
 ```bash
-DRY_RUN=true npm start   # logt wat er zou gebeuren, verstuurt niets
+DRY_RUN=true npm start   # logt wat er naar de Hygge zou gaan, verstuurt niets
 npm start                # echt aansturen
 ```
 
-### Webpagina (gsm)
+Open op je iPhone (op hetzelfde wifi-netwerk) `http://<ip-van-dit-toestel>:8080`.
+Tip: in Safari via *Deel → Zet op beginscherm* krijg je er een icoon voor.
 
-Zolang de bridge draait, is er een webpagina op poort 8080. Open op je iPhone
-(op hetzelfde wifi-netwerk) `http://<ip-van-de-laptop>:8080`. Je ziet er de
-gemeten temperatuur, of de ketel aan staat en een grafiek. Je kunt er ook de
-doeltemperatuur aanpassen of de bridge pauzeren. Tip: in Safari via *Deel → Zet
-op beginscherm* krijg je er een icoon voor.
-
-De pagina heeft geen wachtwoord: gebruik ze alleen in je thuisnetwerk en zet
-poort 8080 **niet** open in je router. Een aangepaste doeltemperatuur en de
-pauzestand worden bewaard in `state.json` en blijven na een herstart gelden.
-
-Eerst uitproberen zonder Niko of Seitron? `npm run demo` start de bridge met een
-gesimuleerde sensor; er wordt dan niets naar je ketel gestuurd.
+Eerst uitproberen zonder Niko of Seitron? `npm run demo` start met een gesimuleerde Niko-sensor;
+er gaat dan niets naar de Hygge.
 
 ### 4. Automatisch starten (Raspberry Pi / Linux)
 
@@ -94,31 +95,17 @@ journalctl -u hygge-bridge -f                        # logs volgen
 
 ## Instellingen (`.env`)
 
-| Variabele                  | Standaard | Betekenis                                              |
-|----------------------------|-----------|--------------------------------------------------------|
-| `TARGET_TEMP`              | 21        | Gewenste temperatuur (°C) volgens de Niko-sensor       |
-| `HYSTERESIS`               | 0,3       | Schakelmarge (°C) rond het doel                        |
-| `HEAT_SETPOINT`            | 25        | Setpoint naar de Hygge om te verwarmen                 |
-| `IDLE_SETPOINT`            | 12        | Setpoint naar de Hygge om niet te verwarmen            |
-| `MIN_SWITCH_INTERVAL_MIN`  | 10        | Minimum minuten tussen twee wissels                    |
-| `STALE_AFTER_MIN`          | 30        | Minuten zonder meting → terug naar weekprogramma       |
-| `RESEND_AFTER_MIN`         | 60        | Huidig commando herhalen na zoveel minuten (0 = nooit) |
-| `DRY_RUN`                  | false     | `true` = enkel loggen                                  |
-| `WEB_PORT`                 | 8080      | Poort van de webpagina (0 = uit)                       |
-| `DEMO`                     | false     | `true` = gesimuleerde sensor, niets versturen          |
+| Variabele          | Standaard | Betekenis                                                  |
+|--------------------|-----------|------------------------------------------------------------|
+| `NIKO_SENSOR_NAME` | –         | Naam van de Niko-sensor die getoond wordt (of `NIKO_SENSOR_UUID`) |
+| `DEFAULT_SETPOINT` | 20        | Temperatuur die de pagina voorstelt zolang je niets koos   |
+| `MIN_SETPOINT`     | 10        | Laagste temperatuur die je kunt kiezen                     |
+| `MAX_SETPOINT`     | 28        | Hoogste temperatuur die je kunt kiezen                     |
+| `WEB_PORT`         | 8080      | Poort van de webpagina (0 = uit)                           |
+| `DRY_RUN`          | false     | `true` = niets naar de Hygge sturen, enkel loggen          |
+| `DEMO`             | false     | `true` = gesimuleerde Niko-sensor, niets versturen         |
 
 Kommagetallen mogen met komma of punt (`20,5` of `20.5`).
-
-## Goed om te weten
-
-- **Vertraging:** de Niko-kant is direct (lokaal). Het commando naar de Hygge gaat
-  via IFTTT en de Seitron-cloud; reken op enkele seconden tot een minuut. Voor
-  verwarming is dat ruim voldoende.
-- **De Hygge blijft zelf ook meten.** Daarom stuurt de bridge "extreme" setpoints:
-  25 °C forceert de ketel aan, 12 °C forceert hem uit. Pas ze aan als je Hygge op
-  een koudere of warmere plek hangt.
-- **Token verlopen?** Na een jaar weigert de controller de verbinding
-  (`Not authorized` in de logs). Vernieuw het token op mynikohomecontrol en pas `.env` aan.
 
 ## Testen
 

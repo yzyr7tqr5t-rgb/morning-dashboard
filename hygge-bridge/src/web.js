@@ -1,8 +1,8 @@
 // Kleine webserver voor de statuspagina (alleen bedoeld voor je thuisnetwerk).
 //  GET  /             -> de pagina
 //  GET  /api/status   -> huidige toestand als JSON
-//  POST /api/target   -> { "target": 21.5 }
-//  POST /api/pause    -> { "paused": true }
+//  POST /api/target   -> { "target": 21.5 }    Hygge manueel op die temperatuur
+//  POST /api/schedule -> { "schedule": true }  Hygge op weekprogramma (false = terug naar manueel)
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises';
 const PAGE = new URL('./web/index.html', import.meta.url);
 const MAX_BODY = 1024;
 
-export function createWebServer({ getStatus, setTarget, setPaused }) {
+export function createWebServer({ getStatus, setTemperature, setSchedule }) {
   return createServer(async (req, res) => {
     try {
       const { pathname } = new URL(req.url, 'http://localhost');
@@ -26,13 +26,13 @@ export function createWebServer({ getStatus, setTarget, setPaused }) {
         if (typeof target !== 'number' || !Number.isFinite(target)) {
           return json(res, 400, { error: 'target moet een getal zijn' });
         }
-        setTarget(target);
+        await setTemperature(target);
         return json(res, 200, getStatus());
       }
-      if (req.method === 'POST' && pathname === '/api/pause') {
-        const { paused } = await readJson(req);
-        if (typeof paused !== 'boolean') return json(res, 400, { error: 'paused moet true of false zijn' });
-        setPaused(paused);
+      if (req.method === 'POST' && pathname === '/api/schedule') {
+        const { schedule } = await readJson(req);
+        if (typeof schedule !== 'boolean') return json(res, 400, { error: 'schedule moet true of false zijn' });
+        await setSchedule(schedule);
         return json(res, 200, getStatus());
       }
       return json(res, 404, { error: 'niet gevonden' });

@@ -2,7 +2,7 @@
   "name": "hygge-bridge",
   "version": "1.0.0",
   "private": true,
-  "description": "Leest een temperatuursensor uit Niko Home Control II en stuurt de Seitron Hygge (via de Hygge Way gateway) aan.",
+  "description": "Toont de temperatuur van Niko Home Control en bedient de Seitron Hygge (via Hygge Way en IFTTT) vanaf een webpagina.",
   "type": "module",
   "main": "src/index.js",
   "engines": {
