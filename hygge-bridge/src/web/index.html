@@ -217,7 +217,15 @@ let status = null;
 let pendingTarget = null;
 let targetTimer = null;
 
+let errorText = '';
+function showError(text) {
+  errorText = text;
+  if (status) render();
+  setTimeout(() => { errorText = ''; if (status) render(); }, 6000);
+}
+
 async function api(path, body) {
+  if (window.DEMO_API) return window.DEMO_API(path, body); // losse demo zonder bridge
   const res = await fetch(path, body === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
@@ -268,9 +276,10 @@ function render() {
   const lc = s.lastCommand;
   let reason = s.reason && s.reason !== 'geen wijziging' ? s.reason : '';
   if (lc && !lc.ok) reason = `Laatste opdracht mislukt: ${lc.reason}`;
+  if (errorText) reason = errorText;
   else if (lc && !reason) reason = `Laatste opdracht om ${time(lc.at)}: ${lc.setpoint != null ? fmt(lc.setpoint) + ' °C' : 'weekprogramma'}`;
   $('reason').textContent = reason;
-  $('reason').className = lc && !lc.ok ? 'reason error' : 'reason';
+  $('reason').className = (lc && !lc.ok) || errorText ? 'reason error' : 'reason';
 
   const target = pendingTarget ?? s.target;
   $('target').textContent = `${fmt(target)} °C`;
@@ -290,7 +299,7 @@ function changeTarget(delta) {
   clearTimeout(targetTimer);
   targetTimer = setTimeout(async () => {
     try { status = await api('api/target', { target: pendingTarget }); }
-    catch (e) { alert(`Kon doel niet aanpassen: ${e.message}`); }
+    catch (e) { showError(`Kon doel niet aanpassen: ${e.message}`); }
     pendingTarget = null;
     render();
   }, 700);
@@ -300,7 +309,7 @@ $('minus').onclick = () => changeTarget(-0.5);
 $('plus').onclick = () => changeTarget(0.5);
 $('pause').onchange = async (e) => {
   try { status = await api('api/pause', { paused: e.target.checked }); render(); }
-  catch (err) { alert(`Lukt niet: ${err.message}`); refresh(); }
+  catch (err) { showError(`Pauzeren lukt niet: ${err.message}`); refresh(); }
 };
 
 // --- Grafiek ------------------------------------------------------------------
@@ -320,7 +329,8 @@ function drawChart(history, target) {
   const y = (v) => pad.t + (hi - v) / (hi - lo) * (H - pad.t - pad.b);
 
   const mins = Math.round((t1 - t0) / 60000);
-  $('range').textContent = mins < 90 ? `laatste ${Math.max(1, mins)} min` : `laatste ${Math.round(mins / 60)} u`;
+  $('range').textContent = mins < 90 ? `laatste ${Math.max(1, mins)} min`
+    : `laatste ${(Math.round(mins / 30) / 2).toLocaleString('nl-BE')} u`;
 
   let out = '';
   // rasterlijnen + y-as
