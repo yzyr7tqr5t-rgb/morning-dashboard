@@ -22,7 +22,7 @@ De Hygge regelt de ketel zelf, op zijn eigen thermometer.
 | **− / +**            | Zet de Hygge manueel op die temperatuur (stappen van 0,5 °C)               |
 | **Weekprogramma**    | Aan: Hygge volgt zijn programma uit de Seitron-app. Uit: terug naar de gekozen temperatuur |
 | **Niko (ter info)**  | Temperatuur van je Niko-sensor en hoe lang geleden gemeten                 |
-| **Grafiek**          | Niko-temperatuur en de temperatuur die op de Hygge is ingesteld            |
+| **Grafiek**          | Wat er de laatste 24 u op de Hygge is ingesteld (manueel of weekprogramma) |
 
 Goed om te weten:
 
@@ -31,7 +31,7 @@ Goed om te weten:
 - "Verstuurd" betekent dat IFTTT de opdracht aannam. Het kan enkele seconden tot een minuut duren voor de
   Hygge ze uitvoert.
 - Bij het opstarten stuurt de bridge **niets** naar de Hygge; enkel wanneer jij op de pagina iets kiest.
-  De laatst gekozen stand wordt bewaard in `state.json`.
+  De laatst gekozen stand en de opdrachten voor de grafiek worden bewaard in `state.json`.
 - De pagina heeft geen wachtwoord: gebruik ze alleen in je thuisnetwerk en zet poort 8080 **niet** open in je router.
 
 ## Wat heb je nodig

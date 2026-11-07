@@ -22,23 +22,10 @@ const sensor = config.demo ? new DemoSensor() : new NikoClient(config.niko);
 
 // --- Niko-temperatuur (alleen om te tonen) ------------------------------------
 
-const HISTORY_STEP_MS = config.demo ? 10_000 : 60_000;
-const HISTORY_MAX = 1440;
-const history = []; // [tijdstip, Niko-temperatuur, Hygge-setpoint of null bij weekprogramma]
 let sensorName = config.niko.sensorName || 'Sensor';
 let connected = false;
 let temperature = null;
 let lastReadingAt = null;
-
-function recordHistory() {
-  const now = Date.now();
-  const point = [now, temperature, hygge.mode === 'manual' ? hygge.setpoint : null];
-  const last = history.at(-1);
-  if (last && now - last[0] < HISTORY_STEP_MS) history[history.length - 1] = [last[0], point[1], point[2]];
-  else history.push(point);
-  const cutoff = now - 24 * 60 * 60_000;
-  while (history.length > HISTORY_MAX || (history.length && history[0][0] < cutoff)) history.shift();
-}
 
 sensor.on('connect', () => {
   connected = true;
@@ -57,7 +44,6 @@ sensor.on('temperature', (value, device) => {
   if (temperature === null || value.toFixed(1) !== temperature.toFixed(1)) log.info(`${sensorName}: ${value.toFixed(1)} °C`);
   temperature = value;
   lastReadingAt = Date.now();
-  recordHistory();
 });
 
 // --- Hygge aansturen vanaf de webpagina -----------------------------------------
@@ -74,7 +60,6 @@ async function setSchedule(on) {
 
 function report(result) {
   saveState();
-  if (temperature !== null) recordHistory();
   const what = result.mode === 'auto' ? 'weekprogramma' : `${result.setpoint} °C`;
   if (result.ok) log.info(`Hygge -> ${what}`);
   else log.error(`Hygge -> ${what} mislukt: ${result.error}`);
@@ -84,7 +69,6 @@ function getStatus() {
   return {
     niko: { sensorName, connected, temperature, lastReadingAt },
     hygge,
-    history,
     demo: config.demo,
     dryRun: config.dryRun,
   };

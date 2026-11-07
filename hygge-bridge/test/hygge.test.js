@@ -22,7 +22,7 @@ test('start zonder opgeslagen stand: niets verstuurd, standaard setpoint', () =>
 
 test('opgeslagen stand wordt hersteld', () => {
   const h = new HyggeControl(fakeSeitron(), limits, { mode: 'auto', setpoint: 21.5 });
-  assert.deepEqual(h.saved(), { mode: 'auto', setpoint: 21.5 });
+  assert.deepEqual(h.saved(), { mode: 'auto', setpoint: 21.5, changes: [] });
 });
 
 test('temperatuur instellen: afronden op 0,5 en binnen de grenzen houden', async () => {
@@ -59,4 +59,21 @@ test('mislukte opdracht wordt gemeld', async () => {
   const result = await h.setTemperature(21);
   assert.equal(result.ok, false);
   assert.match(result.error, /401/);
+});
+
+test('logboek voor de grafiek: alleen gelukte opdrachten, 24 u bewaard', async () => {
+  const h = new HyggeControl(fakeSeitron(), limits);
+  await h.setTemperature(21);
+  await h.setSchedule(true);
+  assert.deepEqual(h.changes.map((c) => c[1]), [21, null]);
+
+  const old = Date.now() - 30 * 60 * 60_000;
+  const restored = new HyggeControl(fakeSeitron(), limits, { changes: [[old - 1000, 18], [old, 19], 'kapot'] });
+  await restored.setTemperature(22);
+  // 18 valt weg, 19 blijft als stand bij het begin van de 24 u
+  assert.deepEqual(restored.changes.map((c) => c[1]), [19, 22]);
+
+  const failing = new HyggeControl(fakeSeitron({ fail: true }), limits);
+  await failing.setTemperature(21);
+  assert.deepEqual(failing.changes, []);
 });
