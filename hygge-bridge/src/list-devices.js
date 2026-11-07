@@ -1,9 +1,11 @@
 // Hulpscript: toont alle Niko-toestellen die een temperatuur doorgeven,
 // zodat je de juiste NIKO_SENSOR_NAME of NIKO_SENSOR_UUID kan kiezen.
 
+import { loadEnvFile } from './env.js';
 import { loadConfig } from './config.js';
 import { NikoClient, readTemperature } from './niko.js';
 
+loadEnvFile();
 const config = loadConfig(process.env, { needSeitron: false });
 const niko = new NikoClient({ ...config.niko, sensorName: '', sensorUuid: '' });
 

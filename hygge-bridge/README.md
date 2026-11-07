@@ -39,7 +39,7 @@ Goed om te weten:
 - Niko Home Control **II** met Connected Controller, softwareversie 2.17 of nieuwer
 - Seitron Hygge Home-kit met Hygge Way-gateway, gekoppeld in de **Seitron Smart**-app
 - Een (gratis) **IFTTT**-account
-- Een toestel dat altijd aan staat in je thuisnetwerk met **Node.js 20.6+** (Raspberry Pi, NAS, pc)
+- Een toestel dat altijd aan staat in je thuisnetwerk, bv. een **Raspberry Pi** (Node.js 18 of nieuwer; het installatiescript regelt dat)
 
 ## Installatie
 
@@ -63,35 +63,48 @@ Seitron heeft geen publieke API; de officiële koppeling voor derden is de
    - *If*: Webhooks → **Receive a web request**, event name `hygge_auto`
    - *Then*: Seitron Smart → **Switch to scheduled mode** (terug naar het weekprogramma).
 
-### 3. Bridge installeren
+### 3. Installeren op de Raspberry Pi
+
+Log in op de Pi (bv. met een SSH-app op je iPhone) en voer uit:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/yzyr7tqr5t-rgb/morning-dashboard/refs/heads/claude/hygge-bridge/hygge-bridge/install.sh)
+```
+
+Het script:
+
+1. installeert git en Node.js als die ontbreken;
+2. haalt de code op naar `~/morning-dashboard` (of werkt ze bij);
+3. vraagt het IP-adres van je Niko-controller, het Niko-token en je IFTTT-sleutel;
+4. toont je Niko-sensoren en vraagt welke je wilt zien;
+5. zet de bridge op als dienst die vanzelf start, standaard eerst in **testmodus** (`DRY_RUN=true`);
+6. toont het adres voor je iPhone, bv. `http://192.168.1.20:8080`.
+
+Later bijwerken: dezelfde opdracht opnieuw uitvoeren (je instellingen blijven). Gegevens opnieuw invullen:
+voeg `--opnieuw-instellen` toe na de opdracht.
+
+Testmodus uitzetten zodra de pagina goed werkt:
+
+```bash
+sed -i 's/^DRY_RUN=.*/DRY_RUN=false/' ~/morning-dashboard/hygge-bridge/.env && sudo systemctl restart hygge-bridge
+```
+
+Logboek volgen: `journalctl -u hygge-bridge -f`
+
+Tip: in Safari via *Deel → Zet op beginscherm* krijg je een icoon voor de pagina.
+Eerst uitproberen zonder Niko of Seitron? `DEMO=true npm start` in `~/morning-dashboard/hygge-bridge`.
+
+### Handmatig installeren (andere computer)
 
 ```bash
 cd hygge-bridge
 npm install
-cp .env.example .env     # en vul NIKO_HOST, NIKO_TOKEN en IFTTT_KEY in
+cp .env.example .env     # en vul NIKO_HOST, NIKO_TOKEN, IFTTT_KEY en NIKO_SENSOR_NAME in
 npm run devices          # toont alle Niko-toestellen met een temperatuur
-```
-
-Zet de juiste naam (of UUID) in `NIKO_SENSOR_NAME` / `NIKO_SENSOR_UUID`. Test daarna eerst droog:
-
-```bash
 DRY_RUN=true npm start   # logt wat er naar de Hygge zou gaan, verstuurt niets
-npm start                # echt aansturen
 ```
 
-Open op je iPhone (op hetzelfde wifi-netwerk) `http://<ip-van-dit-toestel>:8080`.
-Tip: in Safari via *Deel → Zet op beginscherm* krijg je er een icoon voor.
-
-Eerst uitproberen zonder Niko of Seitron? `npm run demo` start met een gesimuleerde Niko-sensor;
-er gaat dan niets naar de Hygge.
-
-### 4. Automatisch starten (Raspberry Pi / Linux)
-
-```bash
-sudo cp hygge-bridge.service /etc/systemd/system/   # pas User en WorkingDirectory aan
-sudo systemctl enable --now hygge-bridge
-journalctl -u hygge-bridge -f                        # logs volgen
-```
+Open daarna `http://<ip-van-dit-toestel>:8080`.
 
 ## Instellingen (`.env`)
 

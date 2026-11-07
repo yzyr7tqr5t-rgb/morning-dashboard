@@ -3,6 +3,7 @@
 // De Hygge regelt de verwarming zelf, op zijn eigen thermometer.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { loadEnvFile } from './env.js';
 import { loadConfig } from './config.js';
 import { NikoClient } from './niko.js';
 import { DemoSensor } from './demo.js';
@@ -15,6 +16,7 @@ const log = {
   error: (...a) => console.error(new Date().toISOString(), 'FOUT:', ...a),
 };
 
+loadEnvFile();
 const config = loadConfig();
 const seitron = new SeitronHygge(config.seitron, { dryRun: config.dryRun, log });
 const hygge = new HyggeControl(seitron, config.hygge, loadSaved());

@@ -6,12 +6,12 @@
   "type": "module",
   "main": "src/index.js",
   "engines": {
-    "node": ">=20.6"
+    "node": ">=18"
   },
   "scripts": {
-    "start": "node --env-file=.env src/index.js",
+    "start": "node src/index.js",
     "demo": "DEMO=true node src/index.js",
-    "devices": "node --env-file=.env src/list-devices.js",
+    "devices": "node src/list-devices.js",
     "test": "node --test"
   },
   "dependencies": {
