@@ -116,7 +116,7 @@ export class NikoClient extends EventEmitter {
       if (!sensor) {
         if (this.sensorName || this.sensorUuid) {
           this.emit('error', new Error(
-            `Sensor "${this.sensorUuid || this.sensorName}" niet gevonden. Voer "npm run devices" uit om de namen te zien.`,
+            `Sensor "${this.sensorUuid || this.sensorName}" niet gevonden. De beschikbare namen staan op de volgende regel.`,
           ));
         }
         return;

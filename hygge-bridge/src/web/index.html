@@ -274,7 +274,9 @@ function render() {
 
   $('sensorName').textContent = `Niko · ${niko.sensorName}`;
   $('temp').textContent = `${fmt(niko.temperature)} °C`;
-  $('age').textContent = `ter info · ${niko.lastReadingAt ? `gemeten ${ago(niko.lastReadingAt)}` : 'nog geen meting'}`;
+  $('age').textContent = niko.sensorFound === false
+    ? `sensor niet gevonden${niko.available.length ? ` · beschikbaar: ${niko.available.join(', ')}` : ''}`
+    : `ter info · ${niko.lastReadingAt ? `gemeten ${ago(niko.lastReadingAt)}` : 'nog geen meting'}`;
 
   const [cls, text] = sending ? ['', 'Versturen…']
     : hygge.mode === 'manual' ? ['manual', `Manueel · ${fmt(hygge.setpoint)} °C`]

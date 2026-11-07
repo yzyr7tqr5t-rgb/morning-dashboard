@@ -32,3 +32,22 @@ export function loadEnvFile(file = new URL('../.env', import.meta.url), env = pr
   }
   return true;
 }
+
+/**
+ * Home Assistant-add-on: de opties uit het tabblad "Configuratie" staan in /data/options.json.
+ * Elke optie wordt een omgevingsvariabele in hoofdletters (niko_host -> NIKO_HOST).
+ */
+export function loadAddonOptions(file = '/data/options.json', env = process.env) {
+  let options;
+  try {
+    options = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return false; // geen add-on
+  }
+  for (const [key, value] of Object.entries(options)) {
+    if (value === null || value === undefined || value === '') continue;
+    const name = key.toUpperCase();
+    if (env[name] === undefined) env[name] = String(value);
+  }
+  return true;
+}

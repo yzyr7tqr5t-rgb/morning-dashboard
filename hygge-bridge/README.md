@@ -34,11 +34,19 @@ Goed om te weten:
   De laatst gekozen stand en de opdrachten voor de grafiek worden bewaard in `state.json`.
 - De pagina heeft geen wachtwoord: gebruik ze alleen in je thuisnetwerk en zet poort 8080 **niet** open in je router.
 
+## Home Assistant-add-on (aanbevolen als je Home Assistant hebt)
+
+1. In Home Assistant: **Instellingen → Add-ons** (in nieuwere versies **Apps**) **→ winkel → ⋮ → Repositories**, en voeg toe:
+   `https://github.com/yzyr7tqr5t-rgb/morning-dashboard#claude/hygge-bridge`
+2. Zoek **Verwarming (Hygge)** in de winkel, installeer en volg het tabblad *Documentatie* (zie ook [DOCS.md](DOCS.md)).
+
+De rest van deze README gaat over de installatie zonder Home Assistant.
+
 ## Wat heb je nodig
 
 - Niko Home Control **II** met Connected Controller, softwareversie 2.17 of nieuwer
 - Seitron Hygge Home-kit met Hygge Way-gateway, gekoppeld in de **Seitron Smart**-app
-- Een (gratis) **IFTTT**-account
+- Een **IFTTT Pro**-abonnement: de Webhooks-dienst van IFTTT is niet beschikbaar in het gratis plan
 - Een toestel dat altijd aan staat in je thuisnetwerk, bv. een **Raspberry Pi** (Node.js 18 of nieuwer; het installatiescript regelt dat)
 
 ## Installatie

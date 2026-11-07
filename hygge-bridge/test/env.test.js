@@ -17,3 +17,13 @@ test('loadEnvFile overschrijft geen bestaande waarden', () => {
   assert.deepEqual(env, { DEMO: 'true', WEB_PORT: '9000' });
   assert.equal(loadEnvFile(join(tmpdir(), 'bestaat-niet.env'), env), false);
 });
+
+test('loadAddonOptions zet Home Assistant-opties om naar omgevingsvariabelen', async () => {
+  const { loadAddonOptions } = await import('../src/env.js');
+  const file = join(mkdtempSync(join(tmpdir(), 'opt-')), 'options.json');
+  writeFileSync(file, JSON.stringify({ niko_host: '192.168.1.5', dry_run: true, min_setpoint: 12.5, niko_sensor_uuid: '' }));
+  const env = { WEB_PORT: '8099' };
+  assert.equal(loadAddonOptions(file, env), true);
+  assert.deepEqual(env, { WEB_PORT: '8099', NIKO_HOST: '192.168.1.5', DRY_RUN: 'true', MIN_SETPOINT: '12.5' });
+  assert.equal(loadAddonOptions(join(tmpdir(), 'geen-options.json'), env), false);
+});

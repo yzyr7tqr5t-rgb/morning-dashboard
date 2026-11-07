@@ -1,0 +1,35 @@
+configuration:
+  niko_host:
+    name: IP-adres Niko-controller
+    description: IP-adres van je Niko Home Control II Connected Controller, bv. 192.168.1.50.
+  niko_token:
+    name: Niko Hobby API-token
+    description: Het token dat je krijgt bij het activeren van de Hobby API op mynikohomecontrol.niko.eu (1 jaar geldig).
+  niko_sensor_name:
+    name: Naam van de Niko-sensor
+    description: Naam van de temperatuursensor die ter info getoond wordt, zoals in Niko. Het logboek van de add-on toont alle beschikbare namen.
+  niko_sensor_uuid:
+    name: UUID van de Niko-sensor (optioneel)
+    description: Gebruik dit in plaats van de naam als twee toestellen dezelfde naam hebben.
+  ifttt_key:
+    name: IFTTT Webhooks-sleutel
+    description: Te vinden op ifttt.com/maker_webhooks/settings, het stuk na /use/. Webhooks vraagt IFTTT Pro.
+  ifttt_event_set_temperature:
+    name: IFTTT-event temperatuur
+    description: Event van de applet "Webhooks → Seitron Smart Set temperature" (temperatuur in Value1).
+  ifttt_event_auto:
+    name: IFTTT-event weekprogramma
+    description: Event van de applet "Webhooks → Seitron Smart Switch to scheduled mode".
+  default_setpoint:
+    name: Starttemperatuur (°C)
+    description: Temperatuur die de pagina voorstelt zolang je nog niets koos.
+  min_setpoint:
+    name: Laagste temperatuur (°C)
+  max_setpoint:
+    name: Hoogste temperatuur (°C)
+  dry_run:
+    name: Testmodus
+    description: Aan = er gaat niets naar de Hygge, alleen het logboek toont wat er verstuurd zou worden. Zet uit zodra alles werkt.
+  demo:
+    name: Demo
+    description: Aan = gesimuleerde Niko-temperatuur en niets versturen. Handig om de pagina uit te proberen.

@@ -3,9 +3,9 @@
 // De Hygge regelt de verwarming zelf, op zijn eigen thermometer.
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { loadEnvFile } from './env.js';
+import { loadAddonOptions, loadEnvFile } from './env.js';
 import { loadConfig } from './config.js';
-import { NikoClient } from './niko.js';
+import { NikoClient, findSensor, readTemperature } from './niko.js';
 import { DemoSensor } from './demo.js';
 import { SeitronHygge } from './seitron.js';
 import { HyggeControl } from './hygge.js';
@@ -16,6 +16,7 @@ const log = {
   error: (...a) => console.error(new Date().toISOString(), 'FOUT:', ...a),
 };
 
+const isAddon = loadAddonOptions();
 loadEnvFile();
 const config = loadConfig();
 const seitron = new SeitronHygge(config.seitron, { dryRun: config.dryRun, log });
@@ -28,6 +29,8 @@ let sensorName = config.niko.sensorName || 'Sensor';
 let connected = false;
 let temperature = null;
 let lastReadingAt = null;
+let sensorFound = null; // null = nog niet bekend
+let available = [];     // namen van Niko-toestellen met een temperatuur, om de juiste te kunnen kiezen
 
 sensor.on('connect', () => {
   connected = true;
@@ -40,6 +43,12 @@ sensor.on('offline', () => {
   log.error('verbinding met Niko verbroken, opnieuw proberen…');
 });
 sensor.on('error', (err) => log.error(err.message));
+sensor.on('devices', (devices) => {
+  const withTemp = devices.filter((d) => readTemperature(d) !== null);
+  available = withTemp.map((d) => d.Name);
+  sensorFound = Boolean(findSensor(devices, config.niko));
+  log.info(`Niko-toestellen met temperatuur: ${withTemp.map((d) => `${d.Name} (${readTemperature(d)} °C)`).join(', ') || 'geen'}`);
+});
 sensor.on('temperature', (value, device) => {
   connected = true;
   if (device.Name) sensorName = device.Name;
@@ -69,7 +78,7 @@ function report(result) {
 
 function getStatus() {
   return {
-    niko: { sensorName, connected, temperature, lastReadingAt },
+    niko: { sensorName, connected, temperature, lastReadingAt, sensorFound, available },
     hygge,
     demo: config.demo,
     dryRun: config.dryRun,
@@ -94,7 +103,9 @@ function saveState() {
 
 const web = config.web.port > 0 ? createWebServer({ getStatus, setTemperature, setSchedule }) : null;
 web?.listen(config.web.port, config.web.host, () => {
-  log.info(`Webpagina op http://${config.web.host === '0.0.0.0' ? '<ip-van-deze-computer>' : config.web.host}:${config.web.port}`);
+  log.info(isAddon
+    ? 'Webpagina: open "Verwarming" in de zijbalk van Home Assistant'
+    : `Webpagina op http://${config.web.host === '0.0.0.0' ? '<ip-van-deze-computer>' : config.web.host}:${config.web.port}`);
 });
 
 // --- Starten en stoppen --------------------------------------------------------
