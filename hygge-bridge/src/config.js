@@ -14,15 +14,22 @@ function required(env, key) {
   return value;
 }
 
+function bool(env, key) {
+  return String(env[key] ?? '').toLowerCase() === 'true';
+}
+
 export function loadConfig(env = process.env, { needSeitron = true } = {}) {
-  const dryRun = String(env.DRY_RUN ?? '').toLowerCase() === 'true';
+  // DEMO: gesimuleerde sensor, er wordt niets naar Niko of Seitron gestuurd.
+  const demo = bool(env, 'DEMO');
+  const dryRun = demo || bool(env, 'DRY_RUN');
+  const needNiko = !demo;
 
   const config = {
     niko: {
-      host: required(env, 'NIKO_HOST'),
+      host: needNiko ? required(env, 'NIKO_HOST') : env.NIKO_HOST || '',
       port: num(env, 'NIKO_PORT', 8884),
       username: env.NIKO_USERNAME || 'hobby',
-      token: required(env, 'NIKO_TOKEN'),
+      token: needNiko ? required(env, 'NIKO_TOKEN') : env.NIKO_TOKEN || '',
       sensorName: env.NIKO_SENSOR_NAME || '',
       sensorUuid: env.NIKO_SENSOR_UUID || '',
       caFile: env.NIKO_CA_FILE || new URL('../certs/niko_ca.pem', import.meta.url),
@@ -37,14 +44,20 @@ export function loadConfig(env = process.env, { needSeitron = true } = {}) {
       hysteresis: num(env, 'HYSTERESIS', 0.3),
       heatSetpoint: num(env, 'HEAT_SETPOINT', 25),
       idleSetpoint: num(env, 'IDLE_SETPOINT', 12),
-      minSwitchIntervalMs: num(env, 'MIN_SWITCH_INTERVAL_MIN', 10) * 60_000,
+      minSwitchIntervalMs: num(env, 'MIN_SWITCH_INTERVAL_MIN', demo ? 1 : 10) * 60_000,
       staleAfterMs: num(env, 'STALE_AFTER_MIN', 30) * 60_000,
       resendAfterMs: num(env, 'RESEND_AFTER_MIN', 60) * 60_000,
     },
+    web: {
+      port: num(env, 'WEB_PORT', 8080),
+      host: env.WEB_HOST || '0.0.0.0',
+    },
+    stateFile: env.STATE_FILE || new URL('../state.json', import.meta.url),
     dryRun,
+    demo,
   };
 
-  if (needSeitron && !config.niko.sensorName && !config.niko.sensorUuid) {
+  if (needSeitron && needNiko && !config.niko.sensorName && !config.niko.sensorUuid) {
     throw new Error('Geef NIKO_SENSOR_NAME of NIKO_SENSOR_UUID op');
   }
   const c = config.control;
@@ -56,4 +69,12 @@ export function loadConfig(env = process.env, { needSeitron = true } = {}) {
     throw new Error('IDLE_SETPOINT moet duidelijk lager liggen dan TARGET_TEMP - HYSTERESIS');
   }
   return config;
+}
+
+/** Grenzen waarbinnen de doeltemperatuur via de webpagina mag bewegen. */
+export function targetBounds({ heatSetpoint, idleSetpoint, hysteresis }) {
+  return {
+    min: Math.ceil((idleSetpoint + hysteresis + 0.5) * 2) / 2,
+    max: Math.floor((heatSetpoint - hysteresis - 0.5) * 2) / 2,
+  };
 }

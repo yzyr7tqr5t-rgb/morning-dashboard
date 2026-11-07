@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node --env-file=.env src/index.js",
+    "demo": "DEMO=true node src/index.js",
     "devices": "node --env-file=.env src/list-devices.js",
     "test": "node --test"
   },

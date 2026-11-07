@@ -61,3 +61,11 @@ test('sensor komt terug na failsafe: meteen weer regelen', () => {
   assert.equal(decide(state, 40 * MIN, control).command, null);
   assert.deepEqual(decide(state, 49 * MIN, control).command, { mode: 'heat', setpoint: 25 });
 });
+
+test('gepauzeerd: meteen terug naar weekprogramma, daarna niets meer', () => {
+  const state = at(18, 5 * MIN, { mode: 'heat', lastCommandAt: 4 * MIN, paused: true });
+  assert.deepEqual(decide(state, 5 * MIN, control).command, { mode: 'auto' });
+  assert.equal(decide({ ...state, mode: 'auto' }, 100 * MIN, control).command, null);
+  // net opgestart en gepauzeerd: niets sturen, de Hygge volgt al zijn eigen schema
+  assert.equal(decide({ ...initialState(), paused: true }, 0, control).command, null);
+});

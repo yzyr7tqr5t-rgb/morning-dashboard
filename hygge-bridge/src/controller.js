@@ -4,10 +4,10 @@
 // Modi:
 //  - 'heat' : Hygge op HEAT_SETPOINT -> ketel brandt
 //  - 'idle' : Hygge op IDLE_SETPOINT -> ketel uit
-//  - 'auto' : Hygge terug op eigen weekprogramma (failsafe als de Niko-sensor zwijgt)
+//  - 'auto' : Hygge terug op eigen weekprogramma (gepauzeerd, of failsafe als de Niko-sensor zwijgt)
 
 export function initialState() {
-  return { mode: null, lastCommandAt: null, lastReadingAt: null, lastTemperature: null };
+  return { mode: null, lastCommandAt: null, lastReadingAt: null, lastTemperature: null, paused: false };
 }
 
 /** Gewenste modus puur op basis van temperatuur en hysterese. */
@@ -24,7 +24,7 @@ export function desiredMode(temperature, currentMode, { targetTemp, hysteresis }
  */
 export function decide(state, now, control) {
   const stale = state.lastReadingAt === null || now - state.lastReadingAt > control.staleAfterMs;
-  const mode = stale ? 'auto' : desiredMode(state.lastTemperature, state.mode, control);
+  const mode = stale || state.paused ? 'auto' : desiredMode(state.lastTemperature, state.mode, control);
   const sinceLast = state.lastCommandAt === null ? Infinity : now - state.lastCommandAt;
 
   if (mode === state.mode) {
@@ -33,6 +33,11 @@ export function decide(state, now, control) {
       return { command: toCommand(mode, control), reason: 'periodieke herhaling' };
     }
     return { command: null, reason: 'geen wijziging' };
+  }
+
+  if (state.paused) {
+    if (state.mode === null) return { command: null, reason: 'gepauzeerd' };
+    return { command: toCommand('auto', control), reason: 'gepauzeerd via de webpagina' };
   }
 
   if (stale) {

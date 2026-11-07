@@ -69,6 +69,21 @@ DRY_RUN=true npm start   # logt wat er zou gebeuren, verstuurt niets
 npm start                # echt aansturen
 ```
 
+### Webpagina (gsm)
+
+Zolang de bridge draait, is er een webpagina op poort 8080. Open op je iPhone
+(op hetzelfde wifi-netwerk) `http://<ip-van-de-laptop>:8080`. Je ziet er de
+gemeten temperatuur, of de ketel aan staat en een grafiek. Je kunt er ook de
+doeltemperatuur aanpassen of de bridge pauzeren. Tip: in Safari via *Deel → Zet
+op beginscherm* krijg je er een icoon voor.
+
+De pagina heeft geen wachtwoord: gebruik ze alleen in je thuisnetwerk en zet
+poort 8080 **niet** open in je router. Een aangepaste doeltemperatuur en de
+pauzestand worden bewaard in `state.json` en blijven na een herstart gelden.
+
+Eerst uitproberen zonder Niko of Seitron? `npm run demo` start de bridge met een
+gesimuleerde sensor; er wordt dan niets naar je ketel gestuurd.
+
 ### 4. Automatisch starten (Raspberry Pi / Linux)
 
 ```bash
@@ -89,6 +104,8 @@ journalctl -u hygge-bridge -f                        # logs volgen
 | `STALE_AFTER_MIN`          | 30        | Minuten zonder meting → terug naar weekprogramma       |
 | `RESEND_AFTER_MIN`         | 60        | Huidig commando herhalen na zoveel minuten (0 = nooit) |
 | `DRY_RUN`                  | false     | `true` = enkel loggen                                  |
+| `WEB_PORT`                 | 8080      | Poort van de webpagina (0 = uit)                       |
+| `DEMO`                     | false     | `true` = gesimuleerde sensor, niets versturen          |
 
 Kommagetallen mogen met komma of punt (`20,5` of `20.5`).
 

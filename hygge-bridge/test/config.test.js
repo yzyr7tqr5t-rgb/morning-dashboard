@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadConfig } from '../src/config.js';
+import { loadConfig, targetBounds } from '../src/config.js';
 
 const base = { NIKO_HOST: '192.168.1.50', NIKO_TOKEN: 'jwt', NIKO_SENSOR_NAME: 'Woonkamer', IFTTT_KEY: 'k' };
 
@@ -24,4 +24,15 @@ test('setpoints moeten buiten de regelmarge liggen', () => {
 
 test('in DRY_RUN is de IFTTT-sleutel niet nodig', () => {
   assert.doesNotThrow(() => loadConfig({ ...base, IFTTT_KEY: '', DRY_RUN: 'true' }));
+});
+
+test('DEMO heeft geen Niko- of IFTTT-gegevens nodig en verstuurt niets', () => {
+  const c = loadConfig({ DEMO: 'true' });
+  assert.equal(c.demo, true);
+  assert.equal(c.dryRun, true);
+  assert.equal(c.web.port, 8080);
+});
+
+test('targetBounds houdt het doel tussen de setpoints', () => {
+  assert.deepEqual(targetBounds({ heatSetpoint: 25, idleSetpoint: 12, hysteresis: 0.3 }), { min: 13, max: 24 });
 });
